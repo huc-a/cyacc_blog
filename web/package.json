@@ -1,0 +1,32 @@
+{
+  "name": "caiya-blog-web",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "pnpm": { "onlyBuiltDependencies": ["esbuild", "@parcel/watcher", "unrs-resolver"] },
+  "type": "module",
+  "engines": { "node": "^24.15.0 || >=26.0.0" },
+  "scripts": {
+    "dev": "nuxt dev --host 127.0.0.1",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "nuxt": "4.6.2",
+    "vue": "^3.5.0",
+    "vue-router": "^5.4.0",
+    "naive-ui": "2.45.3",
+    "markdown-it": "15.0.3",
+    "echarts": "6.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.2.0",
+    "@types/markdown-it": "^14.1.2",
+    "vitest": "^4.1.0",
+    "@playwright/test": "1.64.1"
+  }
+}

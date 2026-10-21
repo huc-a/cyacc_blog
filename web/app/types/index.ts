@@ -1,0 +1,28 @@
+export type ContentType = 'article' | 'work' | 'tutorial' | 'website' | 'deal'
+export interface Taxon { id: number; name: string; slug: string; contentType?: ContentType; count?: number; sortOrder?: number }
+export interface Chapter { chapterKey: string; slug: string; title: string; bodyMarkdown: string }
+export interface Details {
+  demoUrl?: string; sourceUrl?: string; projectStatus?: string; techStack?: string[];
+  difficulty?: string; prerequisitesMarkdown?: string; chapters?: Chapter[];
+  websiteUrl?: string; iconAssetId?: number | null; claimUrl?: string; benefitText?: string;
+  requirementsMarkdown?: string; startsAt?: string | null; endsAt?: string | null;
+  validity?: string; verification?: { result: string; verifiedAt: string; evidenceUrl: string; note: string } | null;
+}
+export interface Content {
+  id: number; contentType: ContentType; slug: string; title: string; summary: string;
+  publishStatus: 'draft' | 'published' | 'offline'; revisionId: number; revisionNo: number;
+  revisionState?: 'editing' | 'frozen'; lockVersion?: number; createdAt?: string; updatedAt?: string;
+  firstPublishedAt?: string; lastPublishedAt?: string; deletedAt?: string;
+  categoryId?: number | null; categoryName?: string; category?: Taxon | null;
+  coverAssetId?: number | null; bodyMarkdown?: string; details?: Details;
+  tags?: Taxon[]; tagIds?: number[]; galleryAssetIds?: number[];
+}
+export interface Page<T> { items: T[]; total: number; page: number; size: number }
+export interface SiteSettings {
+  name: string; description: string; author: string; bio: string; github: string; email: string;
+  footer: string; headline: string; subtitle: string; background: 'mist' | 'blue' | 'dusk';
+  backgroundAssetId: number | null; glassOpacity: number; articleOpacity: number; blur: number;
+  fontSize: number; lineHeight: number; homeModules: ContentType[];
+}
+export interface MediaAsset { id: number; originalName: string; mimeType: string; width: number; height: number; sizeBytes: number; createdAt: string }
+export interface Account { username: string; displayName: string; lockVersion: number }

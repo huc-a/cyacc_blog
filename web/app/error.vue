@@ -1,0 +1,2 @@
+<script setup lang="ts">defineProps<{ error: { statusCode?: number; message?: string } }>()</script>
+<template><div class="error-page"><div class="glass empty-state"><span class="eyebrow">{{ error.statusCode || 'ERROR' }} / A QUIET CORNER</span><h1>{{ error.statusCode === 404 ? '这一页，还没有故事。' : '页面暂时遇到了一点问题。' }}</h1><p>{{ error.statusCode === 404 ? '内容可能尚未发布，或已经下线。' : '请稍后再试。' }}</p><button class="primary" @click="clearError({ redirect: '/' })">回到首页</button></div></div></template>
