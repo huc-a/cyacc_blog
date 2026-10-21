@@ -1,0 +1,15 @@
+FROM node:24.22.1-alpine@sha256:eb37f58646a901dc7727cf448cae36daaefaba79de33b5058dab79aa4c04aefb AS build
+WORKDIR /app
+RUN npm install -g pnpm@10.32.1
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+COPY web/ ./
+RUN pnpm exec nuxt prepare && pnpm build
+
+FROM node:24.22.1-alpine@sha256:eb37f58646a901dc7727cf448cae36daaefaba79de33b5058dab79aa4c04aefb
+WORKDIR /app
+COPY --from=build --chown=node:node /app/.output ./
+USER node
+ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
+EXPOSE 3000
+CMD ["node", "server/index.mjs"]

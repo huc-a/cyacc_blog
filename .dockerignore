@@ -1,0 +1,11 @@
+.git
+.local
+原始数据
+**/node_modules
+**/.nuxt
+**/.output
+**/target
+**/test-results
+**/playwright-report
+**/.env
+**/*.log

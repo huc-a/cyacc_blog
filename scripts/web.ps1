@@ -10,7 +10,7 @@ if (Test-Path $versionFile) {
 Push-Location (Join-Path $projectRoot 'web')
 try {
     $ErrorActionPreference = 'Continue'
-    if ($Action -eq 'install') { & node (Join-Path $projectRoot '.local/tooling/pnpm/package/bin/pnpm.cjs') install --store-dir (Join-Path $projectRoot '.local/pnpm-store') }
+    if ($Action -eq 'install') { & node (Join-Path $projectRoot '.local/tooling/pnpm/package/bin/pnpm.cjs') install --frozen-lockfile --store-dir (Join-Path $projectRoot '.local/pnpm-store') }
     else { & npm.cmd run $Action }
     $webExit = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'

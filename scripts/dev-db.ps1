@@ -1,4 +1,4 @@
-param([string]$PgBin = 'D:\Tool\Postgres\bin', [int]$Port = 55432)
+param([string]$PgBin = $(if ($env:PG_BIN) { $env:PG_BIN } else { 'D:\Tool\Postgres\bin' }), [int]$Port = 55432)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $localDir = Join-Path $projectRoot '.local'

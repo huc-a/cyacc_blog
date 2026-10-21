@@ -29,6 +29,8 @@
 
 ## 站点与管理
 
+公开内容列表支持 `home=true`，按站点 `homeModules` 限制类型；独立栏目和全站搜索不传此参数。
+
 - `GET /api/public/site` 公开配置；`GET /api/admin/site` 返回 settings 和 lockVersion；`PUT /api/admin/site` 原子更新同结构。未知字段拒绝。
 - `GET /api/public/taxonomy`、`GET /api/admin/taxonomy`；`POST/PUT/DELETE /api/admin/taxonomy/categories|tags[/{id}]` 管理词汇，已引用词汇不可删除。
 - `GET/POST /api/admin/media` 分页查询/上传（multipart 字段 file）；`DELETE /api/admin/media/{id}` 删除未引用素材。
