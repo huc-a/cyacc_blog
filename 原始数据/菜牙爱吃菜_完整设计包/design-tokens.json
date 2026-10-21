@@ -1,0 +1,15 @@
+{
+  "name": "菜牙爱吃菜 · 人文玻璃",
+  "background": "原创内嵌 SVG 雾山",
+  "glassOpacity": 0.66,
+  "articleOpacity": 0.88,
+  "backdropBlur": "18px",
+  "bodyFontSize": "19px",
+  "bodyLineHeight": 1.95,
+  "bodyFontFamily": "Songti SC, Noto Serif CJK SC, SimSun, serif",
+  "articleCardMaxWidth": "850px",
+  "articlePaddingDesktop": "48px 50px",
+  "bodyText": "#302f28",
+  "accent": "#6a5340",
+  "cardRadius": "18px"
+}

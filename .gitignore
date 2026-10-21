@@ -1,0 +1,16 @@
+.local/
+.env
+*.log
+node_modules/
+.nuxt/
+.output/
+coverage/
+playwright-report/
+test-results/
+target/
+uploads/
+.DS_Store
+Thumbs.db
+*.dump
+*.zip
+*.tar.gz
