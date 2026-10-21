@@ -2,6 +2,7 @@
 import type { Content, Page } from '~/types'
 const route = useRoute()
 const q = ref(String(route.query.q || ''))
+watch(() => route.query.q, value => { q.value = String(value || '') })
 const query = computed(() => ({ q: String(route.query.q || ''), page: Number(route.query.page || 1), size: 10 }))
 const { data, error } = await useFetch<Page<Content>>('/api/public/contents', { query, key: 'search-contents' })
 const search = () => navigateTo({ path: '/search', query: { q: q.value.trim() || undefined } })

@@ -29,7 +29,7 @@ url = f"jdbc:postgresql://{os.environ.get('PGHOST', '127.0.0.1')}:{os.environ.ge
 jar = sys.argv[1]
 subprocess.run(['java', '-jar', jar, '--migrate-only'], check=True,
                env={**os.environ, 'DB_URL': url, 'MIGRATION_USER': migrator, 'MIGRATION_PASSWORD': password_m})
-assert sql("SELECT count(*) FROM flyway_schema_history WHERE success", runtime, password_r) == '2'
+assert sql("SELECT count(*) FROM flyway_schema_history WHERE success", runtime, password_r) == str(len(list(Path('server/src/main/resources/db/migration').glob('V*__*.sql'))))
 sql("INSERT INTO site_setting(setting_key,value_jsonb) VALUES ('role.probe','{}'); UPDATE site_setting SET value_jsonb='1' WHERE setting_key='role.probe'; DELETE FROM site_setting WHERE setting_key='role.probe';", runtime, password_r)
 sql("INSERT INTO content(content_type,slug) VALUES ('article','role-probe'); DELETE FROM content WHERE slug='role-probe';", runtime, password_r)
 sql('CREATE TABLE forbidden_ddl(id int);', runtime, password_r, expected=False)

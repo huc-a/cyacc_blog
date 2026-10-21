@@ -1,26 +1,37 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type APIRequestContext } from '@playwright/test'
 import { login, mutate } from './helpers'
 const token = `browser-${Date.now()}`
 let article: any, tutorial: any
-test.beforeAll(async ({ request }) => {
+let fixtureRequest: APIRequestContext
+test.beforeAll(async ({ playwright, baseURL }) => {
+  const request = fixtureRequest = await playwright.request.newContext({ baseURL })
   await login(request)
   article = await mutate(request, 'POST', '/api/admin/contents', { type: 'article', slug: token, title: `阅读验证 ${token}`, summary: '真实接口的前台浏览器测试', bodyMarkdown: '# 文字的节奏\n\n这是公开正文。\n\n<script>window.markdownExecuted=true</script>\n\n```js\nconsole.log("hello")\n```', lockVersion: 0 })
   article = await mutate(request, 'POST', `/api/admin/contents/${article.id}/publish`, { lockVersion: article.lockVersion })
   tutorial = await mutate(request, 'POST', '/api/admin/contents', { type: 'tutorial', slug: `${token}-tutorial`, title: `教程验证 ${token}`, summary: '完整章节流程', bodyMarkdown: '# 教程介绍', lockVersion: 0, details: { chapters: [{ chapterKey: crypto.randomUUID(), slug: 'start', title: '从这里开始', bodyMarkdown: '# 第一步\n\n章节一正文' }, { chapterKey: crypto.randomUUID(), slug: 'next', title: '继续探索', bodyMarkdown: '# 第二步\n\n章节二正文' }] } })
   tutorial = await mutate(request, 'POST', `/api/admin/contents/${tutorial.id}/publish`, { lockVersion: tutorial.lockVersion })
 })
-test.afterAll(async ({ request }) => {
-  await login(request)
-  for (const item of [article, tutorial]) if (item) { const current = await (await request.get(`/api/admin/contents/${item.id}`)).json(); await mutate(request, 'POST', `/api/admin/contents/${item.id}/trash`, { lockVersion: current.lockVersion }) }
+test.afterAll(async () => {
+  if (!fixtureRequest) return
+  try { for (const item of [article, tutorial]) if (item) { const current = await (await fixtureRequest.get(`/api/admin/contents/${item.id}`)).json(); await mutate(fixtureRequest, 'POST', `/api/admin/contents/${item.id}/trash`, { lockVersion: current.lockVersion }) } }
+  finally { await fixtureRequest.dispose() }
 })
 test('home, search, SSR reading and safe Markdown work with real content', async ({ page, request }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message))
   const ssr = await request.get(`/articles/${token}`); expect(ssr.status()).toBe(200); expect(await ssr.text()).toContain(`阅读验证 ${token}`)
   const site = await (await request.get('/api/public/site')).json()
   await page.goto('/'); await expect(page.getByRole('heading', { level: 1 })).toHaveText(site.headline)
-  await page.getByRole('link', { name: '搜索', exact: true }).click()
-  await page.getByRole('searchbox', { name: '搜索内容' }).fill(token)
   await page.getByRole('button', { name: '搜索', exact: true }).click()
+  await page.getByRole('searchbox', { name: '搜索内容' }).fill(token)
+  await page.getByRole('button', { name: '提交搜索', exact: true }).click()
+  await expect(page).toHaveURL(/\/search\?q=/)
+  await page.locator('.nav-shell').getByRole('button', { name: '搜索', exact: true }).click()
+  await page.locator('.header-search-panel input').fill(`${token}-missing`)
+  await page.getByRole('button', { name: '提交搜索' }).click()
+  await expect(page.locator('.search-form input')).toHaveValue(`${token}-missing`)
+  await expect(page.getByRole('heading', { name: '暂时没有找到相关记录。' })).toBeVisible()
+  await page.locator('.search-form input').fill(token)
+  await page.locator('.search-form').getByRole('button', { name: '搜索', exact: true }).click()
   await page.getByRole('link', { name: `阅读验证 ${token}`, exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`阅读验证 ${token}`)
   await expect(page.locator('.prose')).toContainText('这是公开正文')

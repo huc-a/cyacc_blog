@@ -21,6 +21,7 @@ public class SiteService {
         SafeUrls.check(settings.github());
         if(new HashSet<>(settings.homeModules()).size()!=settings.homeModules().size()) throw new ApiException(400,"首页栏目不能重复");
         if(settings.backgroundAssetId()!=null && media.lock(settings.backgroundAssetId())==null) throw new ApiException(400,"背景图片不存在");
+        if(settings.avatarAssetId()!=null && media.lock(settings.avatarAssetId())==null) throw new ApiException(400,"头像图片不存在");
         try {if(mapper.save(json.writeValueAsString(settings),version)!=1) throw ApiException.conflict();}
         catch(JsonProcessingException e) {throw new ApiException(400,"配置格式无效");}
         audit.record("site.update","site",0);return read();

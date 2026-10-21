@@ -23,6 +23,7 @@ export interface SiteSettings {
   footer: string; headline: string; subtitle: string; background: 'mist' | 'blue' | 'dusk';
   backgroundAssetId: number | null; glassOpacity: number; articleOpacity: number; blur: number;
   fontSize: number; lineHeight: number; homeModules: ContentType[];
+  avatarAssetId: number | null; icpNumber: string; navTopOpacity: number; navScrolledOpacity: number;
 }
 export interface MediaAsset { id: number; originalName: string; mimeType: string; width: number; height: number; sizeBytes: number; createdAt: string }
 export interface Account { username: string; displayName: string; lockVersion: number }

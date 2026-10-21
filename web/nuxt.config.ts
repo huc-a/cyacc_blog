@@ -1,7 +1,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-21',
   devtools: { enabled: false },
-  css: ['~/assets/main.css', '~/assets/reader.css'],
+  css: ['~/assets/main.css', '~/assets/reader.css', '~/assets/personalization.css'],
   typescript: { strict: true },
   runtimeConfig: {
     apiBase: 'http://127.0.0.1:8080',

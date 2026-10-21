@@ -71,7 +71,7 @@ test('B: upload, appearance preview/apply, and referenced media protection', asy
     const response = page.waitForResponse(r => r.url().endsWith('/api/admin/media') && r.request().method() === 'POST')
     // Valid 1x1 PNG; the server decodes and re-encodes the image.
     const name = `background-${Date.now()}.png`
-    await page.getByLabel('上传图片文件').setInputFiles({ name, mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==', 'base64') })
+    await page.getByLabel('上传图片文件').setInputFiles({ name, mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNImNAAAALEAXGxfUYHAAAAAElFTkSuQmCC', 'base64') })
     const upload = await response; expect(upload.ok(), await upload.text()).toBeTruthy(); asset = await upload.json()
     await expect(page.getByRole('heading', { name })).toBeVisible()
     expect((await request.get(`/api/public/media/${asset.id}`)).status()).toBe(404)

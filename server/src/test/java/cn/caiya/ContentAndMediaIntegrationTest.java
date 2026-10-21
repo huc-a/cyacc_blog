@@ -45,6 +45,48 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     }
     long upload() throws IOException {return n(media.upload(new MockMultipartFile("file","test.png","image/png",png())),"id");}
 
+    @Test void gifAvatarPreservesAnimationAndUsesSiteReferenceProtection() throws Exception {
+        var original=site.read();var asset=media.upload(new MockMultipartFile("file","avatar.gif","image/gif",GifFixtures.animation(2)));long id=n(asset,"id");
+        mvc.perform(get("/api/public/media/"+id)).andExpect(status().isNotFound());
+        var values=json.convertValue(original.get("settings"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
+        values.put("avatarAssetId",id);values.put("icpNumber","桂ICP备2026024037号");values.put("navTopOpacity",0);values.put("navScrolledOpacity",0.95);
+        var changed=site.save(json.convertValue(values,SiteSettings.class),n(original,"lockVersion"));
+        try {
+            mvc.perform(get("/api/public/media/"+id)).andExpect(status().isOk()).andExpect(content().contentType("image/gif"));
+            assertThatThrownBy(()->media.delete(id)).isInstanceOf(ApiException.class);
+            var bytes=java.nio.file.Files.readAllBytes(media.path(mediaMapper.find(id)));
+            assertThat(new String(bytes,java.nio.charset.StandardCharsets.ISO_8859_1)).doesNotContain("untrusted metadata");
+            try(var stream=ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+                var reader=ImageIO.getImageReaders(stream).next();reader.setInput(stream);
+                try {
+                    assertThat(reader.getNumImages(true)).isEqualTo(2);
+                    assertThat(reader.read(0).getRGB(0,0)&0xffffff).isEqualTo(0xff0000);
+                    assertThat(reader.read(1).getRGB(0,0)&0xffffff).isEqualTo(0x0000ff);
+                    var first=(javax.imageio.metadata.IIOMetadataNode)reader.getImageMetadata(0).getAsTree("javax_imageio_gif_image_1.0");
+                    var control=(javax.imageio.metadata.IIOMetadataNode)first.getElementsByTagName("GraphicControlExtension").item(0);
+                    assertThat(control.getAttribute("delayTime")).isEqualTo("7");
+                    assertThat(control.getAttribute("disposalMethod")).isEqualTo("restoreToBackgroundColor");
+                    var loop=(javax.imageio.metadata.IIOMetadataNode)first.getElementsByTagName("ApplicationExtension").item(0);
+                    assertThat(loop.getAttribute("applicationID")).isEqualTo("NETSCAPE");
+                    assertThat((byte[])loop.getUserObject()).containsExactly(1,0,0);
+                    var tree=(javax.imageio.metadata.IIOMetadataNode)reader.getImageMetadata(1).getAsTree("javax_imageio_gif_image_1.0");
+                    assertThat(((javax.imageio.metadata.IIOMetadataNode)tree.getElementsByTagName("GraphicControlExtension").item(0)).getAttribute("delayTime")).isEqualTo("13");
+                } finally {reader.dispose();}
+            }
+        } finally {site.save((SiteSettings)original.get("settings"),n(changed,"lockVersion"));}
+        assertThat(mediaMapper.isPublic(id)).isFalse();media.delete(id);
+    }
+
+    @Test void gifBoundsAndInvalidAvatarSettingsAreRejected() throws Exception {
+        mvc.perform(multipart("/api/admin/media").file(new MockMultipartFile("file","fake.gif","image/gif",png())).with(csrf())).andExpect(status().isBadRequest());
+        mvc.perform(multipart("/api/admin/media").file(new MockMultipartFile("file","many.gif","image/gif",GifFixtures.animation(201))).with(csrf())).andExpect(status().isBadRequest());
+        var original=site.read();var values=json.convertValue(original.get("settings"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
+        values.put("avatarAssetId",Long.MAX_VALUE);
+        mvc.perform(put("/api/admin/site").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("settings",values,"lockVersion",n(original,"lockVersion"))))).andExpect(status().isBadRequest());
+        values.put("avatarAssetId",null);values.put("navTopOpacity",1.5);
+        mvc.perform(put("/api/admin/site").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("settings",values,"lockVersion",n(original,"lockVersion"))))).andExpect(status().isBadRequest());
+    }
+
     @ParameterizedTest @ValueSource(strings={"work","tutorial","website","deal"})
     void everyTypePreservesItsPublishedSnapshot(String type) {
         String slug=slug();var a=contents.create(input(type,slug,"旧标题",0,completeDetails()));long id=n(a,"id");

@@ -13,5 +13,14 @@ public record SiteSettings(
     @DecimalMin("0.80") @DecimalMax("0.99") double articleOpacity,
     @Min(0) @Max(28) int blur,@Min(16) @Max(23) int fontSize,
     @DecimalMin("1.6") @DecimalMax("2.2") double lineHeight,
-    @NotEmpty @Size(max=5) List<@Pattern(regexp="article|work|tutorial|website|deal") String> homeModules
-) {}
+    @NotEmpty @Size(max=5) List<@Pattern(regexp="article|work|tutorial|website|deal") String> homeModules,
+    @Positive Long avatarAssetId, @NotNull @Size(max=80) String icpNumber,
+    @DecimalMin("0") @DecimalMax("1") Double navTopOpacity,
+    @DecimalMin("0.5") @DecimalMax("1") Double navScrolledOpacity
+) {
+    public SiteSettings {
+        icpNumber=icpNumber==null?"":icpNumber;
+        navTopOpacity=navTopOpacity==null?0.0:navTopOpacity;
+        navScrolledOpacity=navScrolledOpacity==null?0.92:navScrolledOpacity;
+    }
+}

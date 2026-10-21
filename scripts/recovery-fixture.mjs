@@ -26,7 +26,7 @@ const csrf = await json('/api/auth/csrf')
 await api('/api/auth/login', { method: 'POST', headers: { [csrf.headerName]: csrf.token, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(credentials) })
 if (mode === 'prepare') {
   const original = await json('/api/admin/site'), token = `recovery-${Date.now()}`, state = { original, items: [] }
-  const form = new FormData(); form.append('file', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' }), `${token}.png`)
+  const form = new FormData(); form.append('file', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNImNAAAALEAXGxfUYHAAAAAElFTkSuQmCC', 'base64')], { type: 'image/png' }), `${token}.png`)
   const csrf = await json('/api/auth/csrf')
   state.asset = await (await api('/api/admin/media', { method: 'POST', headers: { [csrf.headerName]: csrf.token }, body: form })).json()
   for (const type of ['article', 'tutorial']) {
