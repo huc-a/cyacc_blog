@@ -118,6 +118,16 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         d.put("verification",Map.of("result","invalid"));assertThat(service.validity(d)).isEqualTo("invalid");
     }
 
+    @Test void homepageModulesFilterFeedWithoutHidingSectionPages() {
+        String title="home-filter-"+slug();var work=contents.create(input("work",slug(),title,0,completeDetails()));contents.publish(n(work,"id"),0);
+        var original=site.read();var values=json.convertValue(original.get("settings"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});values.put("homeModules",List.of("article"));
+        var updated=site.save(json.convertValue(values,SiteSettings.class),n(original,"lockVersion"));
+        try {
+            assertThat(contents.list(true,"","all",title,1,10,null,null,null,true).get("total")).isEqualTo(0L);
+            assertThat(contents.list(true,"work","all",title,1,10).get("total")).isEqualTo(1L);
+        } finally {site.save((SiteSettings)original.get("settings"),n(updated,"lockVersion"));}
+    }
+
     @Test void verificationIsBoundToPublishedRevisionAndRespectsDates() throws Exception {
         String slug=slug();var a=contents.create(input("deal",slug,"活动",0,completeDetails()));long id=n(a,"id");var p=contents.publish(id,0);
         mvc.perform(post("/api/admin/contents/"+id+"/verify").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("revisionId",n(p,"revisionId"),"result","valid","evidenceUrl","https://example.com","note","已人工确认")))).andExpect(status().isOk());

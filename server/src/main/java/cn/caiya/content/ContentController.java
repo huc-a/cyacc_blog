@@ -14,7 +14,7 @@ public class ContentController {
     public Map<String,Object> publicList(@RequestParam(defaultValue="") String type,@RequestParam(defaultValue="") String q,
         @RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,
         @RequestParam(required=false) Long categoryId,@RequestParam(required=false) Long tagId,
-        @RequestParam(required=false) java.time.LocalDate date) {return service.list(true,type,"all",q,page,size,categoryId,tagId,date);}
+        @RequestParam(required=false) java.time.LocalDate date,@RequestParam(defaultValue="false") boolean home) {return service.list(true,type,"all",q,page,size,categoryId,tagId,date,home);}
     @GetMapping("/api/public/contents/{slug}") public Map<String,Object> publicDetail(@PathVariable String slug) {return service.publicDetail(slug);}
     @GetMapping("/api/admin/contents")
     public Map<String,Object> adminList(@RequestParam(defaultValue="") String type,@RequestParam(defaultValue="all") String status,

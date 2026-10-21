@@ -9,6 +9,7 @@ export default defineNuxtConfig({
   },
   app: { head: { htmlAttrs: { lang: 'zh-CN' }, meta: [{ name: 'theme-color', content: '#697655' }], link: [{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }] } },
   routeRules: {
+    '/admin': { ssr: false },
     '/admin/**': { ssr: false },
     '/**': { headers: { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'Content-Security-Policy': "base-uri 'self'; object-src 'none'; frame-ancestors 'self'" } }
   }

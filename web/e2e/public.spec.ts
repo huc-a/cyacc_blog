@@ -16,7 +16,8 @@ test.afterAll(async ({ request }) => {
 test('home, search, SSR reading and safe Markdown work with real content', async ({ page, request }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message))
   const ssr = await request.get(`/articles/${token}`); expect(ssr.status()).toBe(200); expect(await ssr.text()).toContain(`阅读验证 ${token}`)
-  await page.goto('/'); await expect(page.getByRole('heading', { level: 1 })).toContainText('山色')
+  const site = await (await request.get('/api/public/site')).json()
+  await page.goto('/'); await expect(page.getByRole('heading', { level: 1 })).toHaveText(site.headline)
   await page.getByRole('link', { name: '搜索', exact: true }).click()
   await page.getByRole('searchbox', { name: '搜索内容' }).fill(token)
   await page.getByRole('button', { name: '搜索', exact: true }).click()

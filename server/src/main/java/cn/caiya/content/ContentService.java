@@ -20,6 +20,9 @@ public class ContentService {
         return list(publicOnly,type,status,q,page,size,null,null,null);
     }
     public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long categoryId,Long tagId,java.time.LocalDate date) {
+        return list(publicOnly,type,status,q,page,size,categoryId,tagId,date,false);
+    }
+    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long categoryId,Long tagId,java.time.LocalDate date,boolean home) {
         if(!type.isEmpty()) type(type);
         if(!Set.of("all","draft","published","offline","trash").contains(status) || q.length()>200 || page<1 || page>100000 || size<1 || size>50)
             throw new ApiException(400,"筛选或分页参数无效");
@@ -28,6 +31,7 @@ public class ContentService {
         query.put("search","%"+q.replace("!","!!").replace("%","!%").replace("_","!_")+"%");
         query.put("size",size);query.put("offset",(page-1)*size);
         query.put("categoryId",categoryId);query.put("tagId",tagId);query.put("date",date);
+        query.put("home",home);
         var rows=mapper.list(query).stream().map(Views::camel).toList();
         if(publicOnly) rows.forEach(this::removePrivateFields);
         return Map.of("items",rows,"total",mapper.count(query),"page",page,"size",size);

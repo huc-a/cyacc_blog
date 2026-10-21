@@ -1,0 +1,29 @@
+<script setup lang="ts">
+import type { Content, Page, Taxon } from '~/types'
+import { sections, dateText, statusText, contentUrl } from '~/utils/site'
+import { useMessage, NSelect } from 'naive-ui'
+definePageMeta({ layout: 'admin' })
+const route = useRoute(), api = useApi(), message = useMessage(), confirm = useConfirm()
+const section = computed(() => sections.find(s => s.path === route.params.section))
+if (!section.value) throw createError({ statusCode: 404, message: '管理页面不存在' })
+const status = ref(String(route.query.status || 'all')), q = ref(''), search = ref(''), page = ref(1), category = ref<number | null>(null), selected = ref<number[]>([]), busy = ref(false)
+const query = computed(() => ({ type: section.value!.type, status: status.value, q: search.value, page: page.value, size: 10, categoryId: category.value || undefined }))
+const { data, error, refresh } = await useFetch<Page<Content>>('/api/admin/contents', { query, key: `admin-list-${route.params.section}` })
+const { data: taxonomy } = await useFetch<{ categories: Taxon[] }>('/api/admin/taxonomy')
+const options = computed(() => taxonomy.value?.categories.filter(c => c.contentType === section.value?.type).map(c => ({ label: c.name, value: c.id })) || [])
+watch([status, category, search], () => { page.value = 1; selected.value = [] })
+watch(page, () => { selected.value = [] })
+useSeoMeta({ title: () => `${section.value?.label}管理` })
+async function action(item: Content, action: string) {
+  if (!await confirm(action === 'restore' ? '恢复这条内容？' : action === 'offline' ? '将内容下线？' : '移入回收站？', action === 'restore' ? '恢复后不会自动公开，需要再次发布。' : '前台将无法访问这条内容，历史版本会保留。')) return
+  busy.value = true
+  try { await api(`/api/admin/contents/${item.id}/${action}`, { method: 'POST', body: { lockVersion: item.lockVersion } }); message.success('操作已完成'); await refresh() } catch (e) { message.error(errorText(e)) } finally { busy.value = false }
+}
+async function bulk(action: string) {
+  if (!await confirm('批量操作', `确认${action === 'restore' ? '恢复' : '移入回收站'}选中的 ${selected.value.length} 条内容？`)) return
+  busy.value = true; let completed = 0
+  try { for (const id of selected.value) { const item = data.value!.items.find(i => i.id === id)!; await api(`/api/admin/contents/${id}/${action}`, { method: 'POST', body: { lockVersion: item.lockVersion } }); completed++ } message.success(`已完成 ${completed} 条`) } catch (e) { message.error(`已完成 ${completed} 条；${errorText(e)}`) } finally { selected.value = []; busy.value = false; await refresh() }
+}
+function selectAll(event: Event) { selected.value = (event.target as HTMLInputElement).checked ? data.value?.items.map(i => i.id) || [] : [] }
+</script>
+<template><div v-if="section"><AdminPageHead :title="`${section.label}管理`" :subtitle="`管理你的${section.label}，把零散内容整理成清楚的记录。`"><NuxtLink :to="`/admin/editor/new?type=${section.type}`" class="button primary">＋ 新建{{ section.label }}</NuxtLink></AdminPageHead><section class="studio-panel table-panel"><div class="admin-tabs"><button v-for="s in [{ key: 'all', label: '全部' }, { key: 'draft', label: '草稿' }, { key: 'published', label: '已发布' }, { key: 'offline', label: '已下线' }, { key: 'trash', label: '回收站' }]" :key="s.key" :class="{ active: status === s.key }" @click="status = s.key">{{ s.label }}</button></div><form class="admin-filters" @submit.prevent="search = q"><input v-model="q" type="search" aria-label="搜索管理内容" placeholder="搜索标题、摘要或标签…" maxlength="200"><button>搜索</button><NSelect v-model:value="category" :options="options" clearable placeholder="全部分类" aria-label="筛选分类" style="width:180px" /><small>共 {{ data?.total || 0 }} 条</small></form><div v-if="error" class="admin-empty form-error" role="alert">内容加载失败。<button @click="refresh()">重新加载</button></div><div class="table-scroll"><table class="admin-table"><thead><tr><th><input type="checkbox" aria-label="选择当前页" :checked="!!data?.items.length && selected.length === data.items.length" @change="selectAll"></th><th>标题</th><th>分类</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody><tr v-for="item in data?.items" :key="item.id"><td><input v-model="selected" type="checkbox" :value="item.id" :aria-label="`选择${item.title}`"></td><td class="title-cell"><NuxtLink v-if="status !== 'trash'" :to="`/admin/editor/${item.id}`">{{ item.title || '未命名草稿' }}</NuxtLink><span v-else>{{ item.title || '未命名草稿' }}</span><small>/{{ item.slug }}</small></td><td>{{ item.categoryName || '未分类' }}</td><td><span class="state-badge" :class="item.publishStatus">{{ statusText(item.publishStatus) }}</span><small v-if="item.revisionState === 'editing' && item.publishStatus === 'published'" class="pending-draft">有未发布修改</small></td><td>{{ dateText(item.updatedAt) }}</td><td><div class="row-actions"><template v-if="status === 'trash'"><button :disabled="busy" @click="action(item, 'restore')">恢复</button></template><template v-else><NuxtLink :to="`/admin/editor/${item.id}`">编辑</NuxtLink><NuxtLink v-if="item.publishStatus === 'published'" :to="contentUrl(item)" target="_blank">查看</NuxtLink><button v-if="item.publishStatus === 'published'" :disabled="busy" @click="action(item, 'offline')">下线</button><button class="danger" :disabled="busy" @click="action(item, 'trash')">回收</button></template></div></td></tr><tr v-if="!error && !data?.items.length"><td colspan="6" class="admin-empty">没有匹配的内容，试试调整筛选条件。</td></tr></tbody></table></div><div v-if="selected.length" class="bulk-actions"><span>已选择 {{ selected.length }} 条</span><button :disabled="busy" @click="bulk(status === 'trash' ? 'restore' : 'trash')">{{ status === 'trash' ? '批量恢复' : '移入回收站' }}</button></div><Pagination :page="page" :total="data?.total || 0" :size="10" @change="page = $event" /></section><p class="admin-footnote">草稿会独立保存。只有发布后，修改才会出现在前台。</p></div></template>

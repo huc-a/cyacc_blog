@@ -15,6 +15,7 @@
         </otherwise>
       </choose>
       <if test="type != ''">AND c.content_type=#{type}</if>
+      <if test="home">AND EXISTS(SELECT 1 FROM site_setting s WHERE s.setting_key='site.public' AND jsonb_exists(s.value_jsonb->'homeModules',c.content_type))</if>
       <if test="q != ''">AND (r.title ILIKE #{search} ESCAPE '!' OR r.summary ILIKE #{search} ESCAPE '!' OR EXISTS(SELECT 1 FROM revision_tag rt JOIN tag t ON t.id=rt.tag_id WHERE rt.revision_id=r.id AND t.name ILIKE #{search} ESCAPE '!'))</if>
       <if test="categoryId != null">AND r.category_id=#{categoryId}</if>
       <if test="tagId != null">AND EXISTS(SELECT 1 FROM revision_tag rt WHERE rt.revision_id=r.id AND rt.tag_id=#{tagId})</if>
