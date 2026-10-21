@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.caiya.content.DetailMapper">
+  <select id="read" resultType="map">
+    SELECT * FROM
+    <choose>
+      <when test="type == 'work'">work_detail</when>
+      <when test="type == 'tutorial'">tutorial_detail</when>
+      <when test="type == 'website'">website_detail</when>
+      <when test="type == 'deal'">deal_detail</when>
+      <otherwise>article_detail</otherwise>
+    </choose>
+    WHERE revision_id=#{id}
+  </select>
+  <insert id="save">
+    <choose>
+      <when test="input.type == 'work'">
+        INSERT INTO work_detail(revision_id,body_markdown,demo_url,source_url,project_status,tech_stack)
+        VALUES(#{id},#{input.bodyMarkdown},#{input.details.demoUrl},#{input.details.sourceUrl},#{input.details.projectStatus},
+          ARRAY[<foreach collection="input.details.techStack" item="tech" separator=",">#{tech}</foreach>]::text[])
+        ON CONFLICT(revision_id) DO UPDATE SET body_markdown=EXCLUDED.body_markdown,demo_url=EXCLUDED.demo_url,source_url=EXCLUDED.source_url,project_status=EXCLUDED.project_status,tech_stack=EXCLUDED.tech_stack
+      </when>
+      <when test="input.type == 'tutorial'">
+        INSERT INTO tutorial_detail(revision_id,intro_markdown,difficulty,prerequisites_markdown)
+        VALUES(#{id},#{input.bodyMarkdown},#{input.details.difficulty},#{input.details.prerequisitesMarkdown})
+        ON CONFLICT(revision_id) DO UPDATE SET intro_markdown=EXCLUDED.intro_markdown,difficulty=EXCLUDED.difficulty,prerequisites_markdown=EXCLUDED.prerequisites_markdown
+      </when>
+      <when test="input.type == 'website'">
+        INSERT INTO website_detail(revision_id,website_url,description_markdown,icon_asset_id)
+        VALUES(#{id},#{input.details.websiteUrl},#{input.bodyMarkdown},#{input.details.iconAssetId})
+        ON CONFLICT(revision_id) DO UPDATE SET website_url=EXCLUDED.website_url,description_markdown=EXCLUDED.description_markdown,icon_asset_id=EXCLUDED.icon_asset_id
+      </when>
+      <when test="input.type == 'deal'">
+        INSERT INTO deal_detail(revision_id,body_markdown,source_url,claim_url,benefit_text,requirements_markdown,starts_at,ends_at)
+        VALUES(#{id},#{input.bodyMarkdown},#{input.details.sourceUrl},#{input.details.claimUrl},#{input.details.benefitText},#{input.details.requirementsMarkdown},#{input.details.startsAt},#{input.details.endsAt})
+        ON CONFLICT(revision_id) DO UPDATE SET body_markdown=EXCLUDED.body_markdown,source_url=EXCLUDED.source_url,claim_url=EXCLUDED.claim_url,benefit_text=EXCLUDED.benefit_text,requirements_markdown=EXCLUDED.requirements_markdown,starts_at=EXCLUDED.starts_at,ends_at=EXCLUDED.ends_at
+      </when>
+      <otherwise>
+        INSERT INTO article_detail(revision_id,body_markdown) VALUES(#{id},#{input.bodyMarkdown})
+        ON CONFLICT(revision_id) DO UPDATE SET body_markdown=EXCLUDED.body_markdown
+      </otherwise>
+    </choose>
+  </insert>
+</mapper>

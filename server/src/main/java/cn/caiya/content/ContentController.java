@@ -12,11 +12,14 @@ public class ContentController {
     public record Version(@NotNull @PositiveOrZero Long lockVersion) {}
     @GetMapping("/api/public/contents")
     public Map<String,Object> publicList(@RequestParam(defaultValue="") String type,@RequestParam(defaultValue="") String q,
-        @RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size) {return service.list(true,type,"all",q,page,size);}
+        @RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,
+        @RequestParam(required=false) Long categoryId,@RequestParam(required=false) Long tagId,
+        @RequestParam(required=false) java.time.LocalDate date) {return service.list(true,type,"all",q,page,size,categoryId,tagId,date);}
     @GetMapping("/api/public/contents/{slug}") public Map<String,Object> publicDetail(@PathVariable String slug) {return service.publicDetail(slug);}
     @GetMapping("/api/admin/contents")
     public Map<String,Object> adminList(@RequestParam(defaultValue="") String type,@RequestParam(defaultValue="all") String status,
-        @RequestParam(defaultValue="") String q,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size) {return service.list(false,type,status,q,page,size);}
+        @RequestParam(defaultValue="") String q,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,
+        @RequestParam(required=false) Long categoryId,@RequestParam(required=false) Long tagId) {return service.list(false,type,status,q,page,size,categoryId,tagId,null);}
     @GetMapping("/api/admin/contents/{id}") public Map<String,Object> detail(@PathVariable long id) {return service.detail(id,false);}
     @GetMapping("/api/admin/contents/{id}/revisions") public List<Map<String,Object>> history(@PathVariable long id) {return service.history(id);}
     @PostMapping("/api/admin/contents") public Map<String,Object> create(@Valid @RequestBody ContentInput input) {return service.create(input);}

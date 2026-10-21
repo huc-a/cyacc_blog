@@ -12,6 +12,6 @@ public class AuthController {
     @GetMapping("/csrf") public Map<String,String> csrf(CsrfToken token) { return Map.of("token",token.getToken(),"headerName",token.getHeaderName()); }
     @GetMapping("/me") public Map<String,Object> me(Principal p) {
         var user=mapper.find(p.getName());
-        return Map.of("username",p.getName(),"displayName",user.get("display_name"));
+        return Map.of("username",p.getName(),"displayName",user.get("display_name"),"lockVersion",user.get("lock_version"));
     }
 }

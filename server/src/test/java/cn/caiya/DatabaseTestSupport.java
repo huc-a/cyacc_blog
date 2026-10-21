@@ -17,5 +17,6 @@ public abstract class DatabaseTestSupport {
         registry.add("spring.flyway.password",()->System.getenv().getOrDefault("TEST_DB_PASSWORD",""));
         registry.add("spring.flyway.default-schema",()->SCHEMA);
         registry.add("app.admin-password",()->"Test-only-password-42");
+        registry.add("app.media-dir",()->java.nio.file.Path.of("..",".local","test-uploads",SCHEMA).toAbsolutePath().normalize().toString());
     }
 }

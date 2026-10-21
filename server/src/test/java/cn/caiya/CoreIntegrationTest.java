@@ -31,6 +31,8 @@ class CoreIntegrationTest extends DatabaseTestSupport {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired PlatformTransactionManager tx;
+    @Autowired cn.caiya.media.MediaService media;
+    @Autowired cn.caiya.media.MediaMapper mediaMapper;
     @MockitoSpyBean AuditService audit;
     String slug() {return "test-"+UUID.randomUUID();}
     ContentInput input(String slug,String title,String body,long version) {return new ContentInput("article",slug,title,"摘要 "+title,body,version,null);}
@@ -145,5 +147,16 @@ class CoreIntegrationTest extends DatabaseTestSupport {
         mvc.perform(post("/api/auth/login").with(csrf()).with(r->{r.setRemoteAddr("192.0.2.7");return r;})
             .param("username","unknown-admin").param("password","wrong"))
             .andExpect(status().isTooManyRequests()).andExpect(header().string("Retry-After","60"));
+    }
+
+    @Test void failedMediaAuditRollsBackFileAndDatabaseTogether() throws Exception {
+        var buffer=new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(new java.awt.image.BufferedImage(4,4,java.awt.image.BufferedImage.TYPE_INT_RGB),"png",buffer);
+        long before=mediaMapper.count();
+        doThrow(new IllegalStateException("simulated audit failure")).when(audit).record(eq("media.upload"),eq("media"),anyLong());
+        assertThatThrownBy(()->media.upload(new org.springframework.mock.web.MockMultipartFile("file","rollback.png","image/png",buffer.toByteArray()))).isInstanceOf(IllegalStateException.class);
+        assertThat(mediaMapper.count()).isEqualTo(before);
+        var root=java.nio.file.Path.of("..",".local","test-uploads",SCHEMA);
+        try(var files=java.nio.file.Files.list(root)) {assertThat(files.count()).isEqualTo(before);}
     }
 }

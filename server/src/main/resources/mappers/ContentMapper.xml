@@ -15,12 +15,16 @@
         </otherwise>
       </choose>
       <if test="type != ''">AND c.content_type=#{type}</if>
-      <if test="q != ''">AND (r.title ILIKE #{search} ESCAPE '!' OR r.summary ILIKE #{search} ESCAPE '!')</if>
+      <if test="q != ''">AND (r.title ILIKE #{search} ESCAPE '!' OR r.summary ILIKE #{search} ESCAPE '!' OR EXISTS(SELECT 1 FROM revision_tag rt JOIN tag t ON t.id=rt.tag_id WHERE rt.revision_id=r.id AND t.name ILIKE #{search} ESCAPE '!'))</if>
+      <if test="categoryId != null">AND r.category_id=#{categoryId}</if>
+      <if test="tagId != null">AND EXISTS(SELECT 1 FROM revision_tag rt WHERE rt.revision_id=r.id AND rt.tag_id=#{tagId})</if>
+      <if test="date != null">AND (c.first_published_at AT TIME ZONE 'Asia/Shanghai')::date=#{date}</if>
     </where>
   </sql>
   <select id="list" resultType="map">
     SELECT c.id,c.content_type,c.slug,c.publish_status,c.lock_version,c.deleted_at,c.updated_at,c.first_published_at,c.last_published_at,
-      r.id AS revision_id,r.revision_no,r.title,r.summary,r.revision_state
+      r.id AS revision_id,r.revision_no,r.title,r.summary,r.revision_state,r.category_id,r.cover_asset_id,
+      (SELECT name FROM category k WHERE k.id=r.category_id) AS category_name
     <include refid="source"/>
     ORDER BY <choose><when test="publicOnly">c.last_published_at</when><otherwise>c.updated_at</otherwise></choose> DESC,c.id DESC
     LIMIT #{size} OFFSET #{offset}

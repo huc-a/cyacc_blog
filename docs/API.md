@@ -24,3 +24,16 @@
 阶段 1 内容请求：`{ type, slug, title, summary, bodyMarkdown, lockVersion, changeNote? }`。创建时 lockVersion=0，后续写操作须使用最新响应中的 lockVersion。slug 和 type 创建后固定。公开响应不返回工作版本指针或编辑锁。
 
 恢复不会自动上线；恢复后需显式发布。公开查询暂不缓存，避免跨页面陈旧内容。
+
+阶段 2 扩展：内容请求增加 `categoryId/tagIds/coverAssetId/galleryAssetIds/details`。详情按类型保存，教程 `details.chapters` 含 `chapterKey/slug/title/bodyMarkdown`，数组顺序即章节顺序。作品包含 demoUrl/sourceUrl/projectStatus/techStack，网站包含 websiteUrl/iconAssetId，羊毛包含 sourceUrl/claimUrl/benefitText/requirementsMarkdown/startsAt/endsAt。公开列表支持 categoryId/tagId/date（上海时区）。
+
+## 站点与管理
+
+- `GET /api/public/site` 公开配置；`GET /api/admin/site` 返回 settings 和 lockVersion；`PUT /api/admin/site` 原子更新同结构。未知字段拒绝。
+- `GET /api/public/taxonomy`、`GET /api/admin/taxonomy`；`POST/PUT/DELETE /api/admin/taxonomy/categories|tags[/{id}]` 管理词汇，已引用词汇不可删除。
+- `GET/POST /api/admin/media` 分页查询/上传（multipart 字段 file）；`DELETE /api/admin/media/{id}` 删除未引用素材。
+- `GET /api/admin/media/{id}/file` 管理预览；`GET /api/public/media/{id}` 仅公开内容或站点引用的媒体可读取。草稿素材不会提前公开。
+- `POST /api/admin/contents/{id}/verify` 人工核验，参数 revisionId/result/evidenceUrl/note，只有当前公开羊毛版本可核验。
+- `GET /api/public/summary` 内容汇总和发布日历；`GET /api/admin/dashboard` 工作台；`GET /api/admin/logs?page=1&size=20` 审计分页。
+- `PUT /api/admin/account/profile` 参数 displayName/lockVersion；`POST /api/admin/account/password` 参数 currentPassword/newPassword/lockVersion，修改后重新登录，其他会话也失效。
+- `GET /api/admin/analytics/overview?start=YYYY-MM-DD&end=YYYY-MM-DD` 最多 366 天，status 为 available/unconfigured/unavailable。Umami 凭据不返回浏览器。

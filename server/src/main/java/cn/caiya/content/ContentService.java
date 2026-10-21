@@ -11,11 +11,15 @@ import static cn.caiya.common.Views.number;
 public class ContentService {
     private final ContentMapper mapper;
     private final AuditService audit;
-    public ContentService(ContentMapper mapper,AuditService audit) {this.mapper=mapper;this.audit=audit;}
+    private final DetailService details;
+    public ContentService(ContentMapper mapper,AuditService audit,DetailService details) {this.mapper=mapper;this.audit=audit;this.details=details;}
     public static void type(String type) {
         if(!Set.of("article","work","tutorial","website","deal").contains(type)) throw new ApiException(400,"内容类型无效");
     }
     public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size) {
+        return list(publicOnly,type,status,q,page,size,null,null,null);
+    }
+    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long categoryId,Long tagId,java.time.LocalDate date) {
         if(!type.isEmpty()) type(type);
         if(!Set.of("all","draft","published","offline","trash").contains(status) || q.length()>200 || page<1 || page>100000 || size<1 || size>50)
             throw new ApiException(400,"筛选或分页参数无效");
@@ -23,6 +27,7 @@ public class ContentService {
         query.put("publicOnly",publicOnly);query.put("type",type);query.put("status",status);query.put("q",q);
         query.put("search","%"+q.replace("!","!!").replace("%","!%").replace("_","!_")+"%");
         query.put("size",size);query.put("offset",(page-1)*size);
+        query.put("categoryId",categoryId);query.put("tagId",tagId);query.put("date",date);
         var rows=mapper.list(query).stream().map(Views::camel).toList();
         if(publicOnly) rows.forEach(this::removePrivateFields);
         return Map.of("items",rows,"total",mapper.count(query),"page",page,"size",size);
@@ -42,14 +47,17 @@ public class ContentService {
         long rid=((Number)revisionId).longValue();var r=mapper.revision(rid);
         var out=Views.camel(c);out.remove("workingRevisionId");out.remove("publishedRevisionId");
         out.put("revisionId",rid);out.put("revisionNo",r.get("revision_no"));out.put("revisionState",r.get("revision_state"));
-        out.put("title",r.get("title"));out.put("summary",r.get("summary"));out.put("bodyMarkdown",mapper.body(rid));
+        out.put("title",r.get("title"));out.put("summary",r.get("summary"));
+        out.put("categoryId",r.get("category_id"));out.put("coverAssetId",r.get("cover_asset_id"));
+        out.put("category",r.get("category_id")==null?null:details.category(number(r,"category_id")));
+        out.putAll(details.read(rid,c.get("content_type").toString()));
         if(publicOnly) removePrivateFields(out);
         return out;
     }
     @Transactional
     public Map<String,Object> create(ContentInput input) {
         type(input.type());
-        if(!"article".equals(input.type())) throw new ApiException(400,"此阶段仅开放文章类型");
+        details.validate(input);
         var c=new HashMap<String,Object>();c.put("type",input.type());c.put("slug",input.slug());mapper.insert(c);
         long id=number(c,"id");long rid=makeRevision(id,input,1);
         mapper.working(id,rid);audit.record("content.create",input.type(),id);
@@ -57,7 +65,7 @@ public class ContentService {
     }
     private long makeRevision(long id,ContentInput input,int no) {
         var r=revisionValues(input);r.put("contentId",id);r.put("type",input.type());r.put("revisionNo",no);mapper.insertRevision(r);
-        long rid=number(r,"id");mapper.bodySave(rid,input.bodyMarkdown());return rid;
+        long rid=number(r,"id");details.save(rid,input);return rid;
     }
     private Map<String,Object> revisionValues(ContentInput input) {
         var r=new HashMap<String,Object>();r.put("title",input.title().trim());r.put("summary",input.summary());r.put("changeNote",input.changeNote());return r;
@@ -76,7 +84,7 @@ public class ContentService {
             long rid=makeRevision(id,input,mapper.nextRevision(id));mapper.working(id,rid);
         } else {
             long rid=number(c,"working_revision_id");var r=revisionValues(input);r.put("id",rid);
-            if(mapper.updateRevision(r)!=1) throw ApiException.conflict();mapper.bodySave(rid,input.bodyMarkdown());
+            if(mapper.updateRevision(r)!=1) throw ApiException.conflict();details.save(rid,input);
         }
         if(mapper.touch(id,input.lockVersion())!=1) throw ApiException.conflict();
         audit.record("content.save",input.type(),id);return detail(id,false);
@@ -88,8 +96,8 @@ public class ContentService {
             if(c.get("published_revision_id")==null || "published".equals(c.get("publish_status"))) throw new ApiException(400,"没有待发布的修改");
             mapper.publish(id,number(c,"published_revision_id"));
         } else {
-            long rid=((Number)working).longValue();var r=mapper.revision(rid);var body=mapper.body(rid);
-            if(r.get("title").toString().isBlank() || body==null || body.isBlank()) throw new ApiException(400,"发布前请填写标题和正文");
+            long rid=((Number)working).longValue();var r=mapper.revision(rid);
+            details.validatePublish(rid,c.get("content_type").toString(),r.get("title").toString());
             if(mapper.freeze(rid)!=1) throw ApiException.conflict();mapper.publish(id,rid);
         }
         if(mapper.touch(id,version)!=1) throw ApiException.conflict();audit.record("content.publish",(String)c.get("content_type"),id);
