@@ -1,14 +1,16 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
 import { login, mutate } from './helpers'
 
-test('wider home sidebar leaves room for the feed at desktop and mobile sizes', async ({ page }) => {
+test('home sidebar and compact profile leave room for the feed at desktop and mobile sizes', async ({ page }) => {
   for (const width of [1440, 1104, 951, 851, 850, 390]) {
     await page.setViewportSize({ width, height: 828 })
     await page.goto('/')
+    if (width > 850) await expect(page.locator('.left-sidebar')).toHaveCSS('width', `${width > 1150 ? 245 : 235}px`)
     const sidebar = await page.locator('.left-sidebar').boundingBox()
     const feed = await page.locator('.feed-column').boundingBox()
     if (width > 850) {
-      expect(sidebar!.width).toBe(width > 1150 ? 280 : 260)
+      expect(sidebar!.width).toBe(width > 1150 ? 245 : 235)
+      expect((await page.locator('.profile').boundingBox())!.height).toBeLessThan(430)
       expect(feed!.width).toBeGreaterThan(450)
       expect(sidebar!.x + sidebar!.width).toBeLessThan(feed!.x)
     } else {
