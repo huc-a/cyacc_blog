@@ -41,7 +41,12 @@ public class ContentService {
     }
     public Map<String,Object> publicDetail(String slug) {
         var id=mapper.publicId(slug);if(id==null) throw new ApiException(404,"内容不存在或尚未发布");
-        return detail(id,true);
+        var out=detail(id,true);
+        var navigation=new HashMap<String,Object>();
+        var previous=mapper.neighbor(id,false);var next=mapper.neighbor(id,true);
+        navigation.put("previous",previous==null?null:Views.camel(previous));
+        navigation.put("next",next==null?null:Views.camel(next));
+        out.put("navigation",navigation);return out;
     }
     public Map<String,Object> detail(long id,boolean publicOnly) {
         var c=mapper.identity(id);if(c==null) throw new ApiException(404,"内容不存在");

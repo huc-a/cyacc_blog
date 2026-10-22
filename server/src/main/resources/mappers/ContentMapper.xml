@@ -32,4 +32,18 @@
     LIMIT #{size} OFFSET #{offset}
   </select>
   <select id="count" resultType="long">SELECT count(*) <include refid="source"/></select>
+  <select id="neighbor" resultType="map">
+    SELECT c.id,c.content_type,c.slug,r.title
+    FROM content current
+    JOIN content c ON c.content_type=current.content_type
+    JOIN content_revision r ON r.id=c.published_revision_id
+    WHERE current.id=#{id} AND current.publish_status='published' AND current.deleted_at IS NULL
+      AND c.publish_status='published' AND c.deleted_at IS NULL
+      AND (c.last_published_at,c.id)
+        <choose><when test="newer">&gt;</when><otherwise>&lt;</otherwise></choose>
+        (current.last_published_at,current.id)
+    ORDER BY c.last_published_at <choose><when test="newer">ASC</when><otherwise>DESC</otherwise></choose>,
+      c.id <choose><when test="newer">ASC</when><otherwise>DESC</otherwise></choose>
+    LIMIT 1
+  </select>
 </mapper>

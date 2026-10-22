@@ -16,7 +16,9 @@ export interface Content {
   categoryId?: number | null; categoryName?: string; category?: Taxon | null;
   coverAssetId?: number | null; bodyMarkdown?: string; details?: Details;
   tags?: Taxon[]; tagNames?: string[]; tagIds?: number[]; galleryAssetIds?: number[];
+  navigation?: { previous: ContentNeighbor | null; next: ContentNeighbor | null };
 }
+export type ContentNeighbor = Pick<Content, 'id' | 'contentType' | 'slug' | 'title'>
 export interface Page<T> { items: T[]; total: number; page: number; size: number }
 export interface SiteSettings {
   name: string; description: string; author: string; bio: string; github: string; email: string;

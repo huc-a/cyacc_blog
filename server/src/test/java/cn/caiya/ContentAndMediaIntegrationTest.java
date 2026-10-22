@@ -45,6 +45,42 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     }
     long upload() throws IOException {return n(media.upload(new MockMultipartFile("file","test.png","image/png",png())),"id");}
 
+    @Test @org.springframework.transaction.annotation.Transactional
+    void readingNeighborsUsePublicTitlesAndStableOrderWithinTheSameType() throws Exception {
+        // Isolate the visible article sequence inside this rolled-back test transaction.
+        jdbc.update("UPDATE content SET publish_status='offline' WHERE content_type='article' AND publish_status='published'");
+        var sequence=new ArrayList<Map<String,Object>>();
+        for(int i=0;i<7;i++) {
+            String type=i==4?"work":"article";
+            var item=contents.create(input(type,slug(),"公开标题 "+i,0,completeDetails()));
+            if(i!=1) item=contents.publish(n(item,"id"),n(item,"lockVersion"));
+            jdbc.update("UPDATE content SET last_published_at='2099-01-01T00:00:00Z' WHERE id=?",n(item,"id"));
+            sequence.add(item);
+        }
+        var previous=sequence.get(0);var current=sequence.get(2);var next=sequence.get(6);
+        contents.transition(n(sequence.get(3),"id"),n(sequence.get(3),"lockVersion"),"offline");
+        contents.transition(n(sequence.get(5),"id"),n(sequence.get(5),"lockVersion"),"trash");
+        previous=contents.save(n(previous,"id"),input("article",previous.get("slug").toString(),"尚未发布的标题",n(previous,"lockVersion"),completeDetails()));
+        String path="/api/public/contents/"+current.get("slug");
+        mvc.perform(get(path)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.navigation.previous.slug").value(previous.get("slug")))
+            .andExpect(jsonPath("$.navigation.previous.title").value("公开标题 0"))
+            .andExpect(jsonPath("$.navigation.next.slug").value(next.get("slug")))
+            .andExpect(jsonPath("$.navigation.next.contentType").value("article"))
+            .andExpect(jsonPath("$.navigation.previous.lockVersion").doesNotExist());
+        mvc.perform(get("/api/public/contents/"+previous.get("slug")))
+            .andExpect(jsonPath("$.navigation.previous").value(org.hamcrest.Matchers.nullValue()));
+        mvc.perform(get("/api/public/contents/"+next.get("slug")))
+            .andExpect(jsonPath("$.navigation.next").value(org.hamcrest.Matchers.nullValue()));
+        contents.transition(n(previous,"id"),n(previous,"lockVersion"),"offline");
+        contents.transition(n(next,"id"),n(next,"lockVersion"),"trash");
+        mvc.perform(get(path)).andExpect(jsonPath("$.navigation.previous").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.navigation.next").value(org.hamcrest.Matchers.nullValue()));
+        contents.transition(n(current,"id"),n(current,"lockVersion"),"offline");
+        for(var item:List.of(current,sequence.get(1),sequence.get(5)))
+            mvc.perform(get("/api/public/contents/"+item.get("slug"))).andExpect(status().isNotFound());
+    }
+
     @Test @SuppressWarnings("unchecked") void listTagsFollowPublishedRevisionWithoutLeakingWorkingTags() {
         String slug=slug();
         var oldTag=new HashMap<String,Object>(Map.of("name","published-"+slug,"slug","published-"+slug));taxonomy.createTag(oldTag);

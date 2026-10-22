@@ -1,1 +1,9 @@
 .code-block{position:relative;margin:28px 0}.code-block>button{position:absolute;right:9px;top:9px;padding:4px 9px;font:10px var(--ui-font);background:#f8f6e9}.code-block>pre{padding-top:40px}.tech-stack{margin-top:22px}
+.content-navigation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:24px 0}
+.content-neighbor{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:18px;border:1px solid #93876633;border-radius:12px;min-width:0;background:#fff3}
+.content-neighbor>span:first-child{font-size:11px;color:var(--muted)}
+.content-neighbor strong{font:500 16px/1.7 var(--serif-font);overflow-wrap:anywhere}
+.content-neighbor.next{text-align:right}
+a.content-neighbor:hover{background:#fff8;border-color:#83846188}
+.content-neighbor.unavailable{color:var(--muted);font-size:12px;background:transparent;border-style:dashed}
+@media(max-width:570px){.content-navigation{grid-template-columns:1fr;gap:10px}.content-neighbor{padding:15px}}

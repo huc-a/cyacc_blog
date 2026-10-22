@@ -30,6 +30,7 @@ public interface ContentMapper {
     @Update("UPDATE content SET deleted_at=NULL,publish_status=CASE WHEN published_revision_id IS NULL THEN 'draft' ELSE 'offline' END WHERE id=#{id}") void restore(long id);
     List<Map<String,Object>> list(Map<String,Object> query);
     long count(Map<String,Object> query);
+    Map<String,Object> neighbor(@Param("id") long id,@Param("newer") boolean newer);
     @Select("SELECT id FROM content WHERE slug=#{slug} AND publish_status='published' AND deleted_at IS NULL") Long publicId(String slug);
     @Select("SELECT id,revision_no,title,summary,revision_state,created_at,frozen_at,change_note FROM content_revision WHERE content_id=#{id} ORDER BY revision_no DESC")
     List<Map<String,Object>> history(long id);
