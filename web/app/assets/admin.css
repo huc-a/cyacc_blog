@@ -16,3 +16,7 @@
 .admin-shell .editor-view-actions button:hover{background:#e8eddf}
 .editor-topbar small{color:#738260;white-space:nowrap}
 @media(max-width:760px){.editor-topbar{position:sticky;top:8px;padding:11px 12px;gap:10px;background:#f8f9eff5;margin:0 0 16px}.editor-topbar .editor-actions{width:100%;justify-content:space-between;margin:0;gap:8px}.editor-save-actions{padding-left:8px}.editor-topbar .editor-identity{flex-wrap:nowrap}}
+.account-avatar{overflow:hidden}.account-avatar>img{display:block;width:100%;height:100%;object-fit:cover}
+.settings-stack .avatar-control-preview{width:90px;height:90px;border-radius:50%}
+.settings-stack .site-image-control .admin-actions{gap:6px}
+.login-screen{position:relative}.login-screen .landscape{position:fixed}

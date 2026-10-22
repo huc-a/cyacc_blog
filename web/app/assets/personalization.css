@@ -125,3 +125,4 @@
   .has-cover .card-visual, .collection-grid .card-visual { min-height: 255px; }
   .content-card .card-meta { padding: 10px 16px; gap: 6px 10px; }
 }
+.police-record{width:fit-content}.police-record.pending{opacity:.8}.police-record[href]:hover{text-decoration:underline;text-underline-offset:3px}

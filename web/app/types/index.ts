@@ -26,6 +26,7 @@ export interface SiteSettings {
   backgroundAssetId: number | null; glassOpacity: number; articleOpacity: number; blur: number;
   fontSize: number; lineHeight: number; homeModules: ContentType[];
   avatarAssetId: number | null; icpNumber: string; navTopOpacity: number; navScrolledOpacity: number;
+  policeNumber: string; loginBackgroundAssetId: number | null;
 }
 export interface MediaAsset { id: number; originalName: string; mimeType: string; width: number; height: number; sizeBytes: number; createdAt: string }
-export interface Account { username: string; displayName: string; lockVersion: number }
+export interface Account { username: string; displayName: string; avatarAssetId: number | null; lockVersion: number }

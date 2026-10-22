@@ -111,7 +111,7 @@ test('tutorial chapter order, unsaved guard, optimistic conflict, admin pages an
     await page.getByRole('button', { name: '＋ 添加章节', exact: true }).click()
     await page.getByLabel('章节标题').nth(1).fill('后写的章节'); await page.getByLabel('章节正文').nth(1).fill('第二章正文')
     await page.getByRole('button', { name: '上移第2章' }).click()
-    await page.getByRole('link', { name: '← 返回', exact: true }).click()
+    await page.getByRole('link', { name: '返回列表', exact: true }).click()
     await expect(page.getByText('还有未保存的修改。离开后，这些修改将丢失。')).toBeVisible()
     await page.getByRole('button', { name: '取消', exact: true }).click()
     await page.getByRole('button', { name: '保存草稿', exact: true }).click()
@@ -123,7 +123,7 @@ test('tutorial chapter order, unsaved guard, optimistic conflict, admin pages an
     await page.getByRole('button', { name: '保存草稿', exact: true }).click()
     await expect(page.locator('.n-message-container')).toContainText(/冲突|刷新|修改/)
     expect((await (await page.request.get(`/api/admin/contents/${id}`)).json()).title).toBe('来自另一个页面的修改')
-    await page.getByRole('link', { name: '← 返回', exact: true }).click(); await confirm(page)
+    await page.getByRole('link', { name: '返回列表', exact: true }).click(); await confirm(page)
     for (const path of ['dashboard', 'taxonomy', 'settings', 'logs', 'analytics', 'works', 'websites', 'deals']) {
       await page.goto(`/admin/${path}`); await expect(page.locator('.admin-content h1')).toBeVisible()
     }

@@ -6,7 +6,7 @@
 
 - `GET /api/auth/csrf` 获取 `{ token, headerName }`，使用会话保存的令牌。
 - `POST /api/auth/login` 表单编码 `username/password`，需要 CSRF。成功后重新获取令牌，避免沿用登录前令牌。
-- `GET /api/auth/me` 返回账号名与显示名，不返回密码哈希。
+- `GET /api/auth/me` 返回 username/displayName/avatarAssetId/lockVersion，不返回密码哈希。管理员头像可空，图片使用已登录的 `/api/admin/media/{id}/file` 读取。
 - `POST /api/auth/logout` 需要 CSRF，成功 204。
 
 ## 内容
@@ -35,11 +35,12 @@
 
 - `GET /api/public/site` 公开配置；`GET /api/admin/site` 返回 settings 和 lockVersion；`PUT /api/admin/site` 原子更新同结构。未知字段拒绝。
 - v1.1.0 站点字段：`avatarAssetId`（可空、引用媒体）、`icpNumber`（最多 80 字符、空值不展示）、`navTopOpacity`（0–1，默认 0）、`navScrolledOpacity`（0.5–1，默认 0.92）。壁纸继续使用 `backgroundAssetId`。保存时传完整 settings 和最新 lockVersion。
+- v1.4.0 新增 `policeNumber`（可空字符串；完整格式为地区简称、公网安备、14 位数字及“号”，最多 80 字符）。空值时前台显示“公安备案办理中”；正式号码链接到公安备案查询。`loginBackgroundAssetId` 可空，为登录页独立壁纸；空值时沿用博客背景，保存后可匿名读取，使用中的壁纸不可删除。
 - `GET /api/public/taxonomy`、`GET /api/admin/taxonomy`；`POST/PUT/DELETE /api/admin/taxonomy/categories|tags[/{id}]` 管理词汇，已引用词汇不可删除。
 - `GET/POST /api/admin/media` 分页查询/上传（multipart 字段 file）；`DELETE /api/admin/media/{id}` 删除未引用素材。
 - 图片支持 PNG/JPEG/GIF，输入最多 5 MB、单帧最多 1600 万像素且边长不超过 8000。GIF 最多 200 帧，画布面积乘帧数不超过 6400 万像素。全部重新编码，GIF 保留动画，处理后最多 10 MB；伪造类型和超限返回 400，引用中的素材删除返回 409。
 - `GET /api/admin/media/{id}/file` 管理预览；`GET /api/public/media/{id}` 仅公开内容或站点引用的媒体可读取。草稿素材不会提前公开。
 - `POST /api/admin/contents/{id}/verify` 人工核验，参数 revisionId/result/evidenceUrl/note，只有当前公开羊毛版本可核验。
 - `GET /api/public/summary` 内容汇总和发布日历；`GET /api/admin/dashboard` 工作台；`GET /api/admin/logs?page=1&size=20` 审计分页。
-- `PUT /api/admin/account/profile` 参数 displayName/lockVersion；`POST /api/admin/account/password` 参数 currentPassword/newPassword/lockVersion，修改后重新登录，其他会话也失效。
+- `PUT /api/admin/account/profile` 参数 displayName/avatarAssetId/lockVersion；avatarAssetId 为可空正整数，头像独立于博客头像，仅管理员可读取，引用中不可删除。`POST /api/admin/account/password` 参数 currentPassword/newPassword/lockVersion，修改后重新登录，其他会话也失效。
 - `GET /api/admin/analytics/overview?start=YYYY-MM-DD&end=YYYY-MM-DD` 最多 366 天，status 为 available/unconfigured/unavailable。Umami 凭据不返回浏览器。

@@ -24,6 +24,6 @@ useSeoMeta({ titleTemplate: title => title ? `${title} · ${site.value.name}` : 
     </header>
     <div v-if="error" class="connection-error wrap" role="alert">站点服务暂时不可用，请稍后刷新。</div>
     <main id="main"><slot /></main>
-    <footer class="site-footer wrap"><div class="footer-identity"><span>© {{ new Date().getFullYear() }} {{ site.name }} · {{ site.footer }}</span><a v-if="site.icpNumber" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="icp-record">{{ site.icpNumber }}</a></div><NuxtLink to="/about" class="footer-about">关于这里</NuxtLink></footer>
+    <footer class="site-footer wrap"><div class="footer-identity"><span>© {{ new Date().getFullYear() }} {{ site.name }} · {{ site.footer }}</span><a v-if="site.icpNumber" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="icp-record">{{ site.icpNumber }}</a><a v-if="site.policeNumber" :href="`https://beian.mps.gov.cn/#/query/webSearch?code=${site.policeNumber.replace(/\D/g, '')}`" target="_blank" rel="noopener noreferrer" class="police-record">{{ site.policeNumber }}</a><span v-else class="police-record pending">公安备案办理中</span></div><NuxtLink to="/about" class="footer-about">关于这里</NuxtLink></footer>
   </div>
 </template>

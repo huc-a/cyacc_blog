@@ -13,7 +13,8 @@ export const defaultSite: SiteSettings = {
   name: '菜牙爱吃菜', description: '记录技术里的发现，也收藏生活中值得停留的片刻。', author: '菜牙', bio: '热爱技术，也认真生活。', github: '', email: '',
   footer: '风景作底，文字为先。', headline: '山色入笺，日常成诗。', subtitle: '记录技术里的发现，也收藏生活中值得停留的片刻。', background: 'mist', backgroundAssetId: null,
   glassOpacity: .66, articleOpacity: .88, blur: 18, fontSize: 19, lineHeight: 1.95, homeModules: ['article', 'work', 'tutorial', 'website', 'deal'],
-  avatarAssetId: null, icpNumber: '', navTopOpacity: 0, navScrolledOpacity: .92
+  avatarAssetId: null, icpNumber: '', navTopOpacity: 0, navScrolledOpacity: .92,
+  policeNumber: '', loginBackgroundAssetId: null
 }
 export const themeStyle = (site: SiteSettings, adminPreview = false) => ({
   '--scene': `url("${site.backgroundAssetId ? `/api/${adminPreview ? 'admin' : 'public'}/media/${site.backgroundAssetId}${adminPreview ? '/file' : ''}` : `/backgrounds/${site.background}.svg`}")`,
