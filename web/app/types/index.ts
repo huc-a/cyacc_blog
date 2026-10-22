@@ -15,7 +15,7 @@ export interface Content {
   firstPublishedAt?: string; lastPublishedAt?: string; deletedAt?: string;
   categoryId?: number | null; categoryName?: string; category?: Taxon | null;
   coverAssetId?: number | null; bodyMarkdown?: string; details?: Details;
-  tags?: Taxon[]; tagIds?: number[]; galleryAssetIds?: number[];
+  tags?: Taxon[]; tagNames?: string[]; tagIds?: number[]; galleryAssetIds?: number[];
 }
 export interface Page<T> { items: T[]; total: number; page: number; size: number }
 export interface SiteSettings {

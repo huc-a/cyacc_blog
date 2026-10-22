@@ -11,8 +11,12 @@ if (-not (Test-Path (Join-Path $dataDir 'PG_VERSION'))) {
 & "$PgBin\pg_ctl.exe" -D $dataDir status *> $null
 if ($LASTEXITCODE -ne 0) {
     $pgArguments = @('-D', ('"' + $dataDir + '"'), '-l', ('"' + (Join-Path $localDir 'postgres.log') + '"'), '-o', ('"-p ' + $Port + ' -h 127.0.0.1"'), '-w', 'start')
-    $starter = Start-Process -FilePath "$PgBin\pg_ctl.exe" -ArgumentList $pgArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $localDir 'pg-start.out.log') -RedirectStandardError (Join-Path $localDir 'pg-start.err.log')
-    if ($starter.ExitCode -ne 0) { throw 'PostgreSQL start failed; inspect .local/postgres.log' }
+    $starter = Start-Process -FilePath "$PgBin\pg_ctl.exe" -ArgumentList $pgArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $localDir 'pg-start.out.log') -RedirectStandardError (Join-Path $localDir 'pg-start.err.log')
+    # Wait for pg_ctl only. Start-Process -Wait also waits for its long-running PostgreSQL child.
+    $starter.WaitForExit()
+    $starter.Dispose()
+    & "$PgBin\pg_ctl.exe" -D $dataDir status *> $null
+    if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL start failed; inspect .local/postgres.log' }
 }
 $roleExists = & "$PgBin\psql.exe" -h 127.0.0.1 -p $Port -U postgres -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='caiya'"
 if ($roleExists -ne '1') {

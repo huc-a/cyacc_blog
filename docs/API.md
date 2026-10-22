@@ -14,6 +14,7 @@
 统一五类内容端点避免复制 API，类型通过 `type=article|work|tutorial|website|deal` 指定。
 
 - `GET /api/public/contents?type=&q=&page=1&size=10` 仅公开冻结版本，返回 items/total/page/size。
+- 列表项包含 `tagNames` 字符串数组，用于卡片底部标签；公开列表读取已发布版本，管理列表读取当前工作版本，未发布的标签修改不会提前公开。
 - `GET /api/public/contents/{slug}` 公开详情；不存在、草稿、下线和回收站均为 404。
 - `GET /api/admin/contents?type=&status=all&q=&page=1&size=10`，status 支持 all/draft/published/offline/trash；draft 包含已发布但有工作稿的内容。
 - `GET /api/admin/contents/{id}` 返回工作稿（无工作稿时返回已发布版本），包括 lockVersion。

@@ -45,6 +45,23 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     }
     long upload() throws IOException {return n(media.upload(new MockMultipartFile("file","test.png","image/png",png())),"id");}
 
+    @Test @SuppressWarnings("unchecked") void listTagsFollowPublishedRevisionWithoutLeakingWorkingTags() {
+        String slug=slug();
+        var oldTag=new HashMap<String,Object>(Map.of("name","published-"+slug,"slug","published-"+slug));taxonomy.createTag(oldTag);
+        var nextTag=new HashMap<String,Object>(Map.of("name","working-"+slug,"slug","working-"+slug));taxonomy.createTag(nextTag);
+        var input=new ContentInput("article",slug,slug,"摘要","正文",0L,null,null,List.of(n(oldTag,"id")),null,List.of(),null);
+        var item=contents.create(input);long id=n(item,"id");var published=contents.publish(id,0);
+        var changed=contents.save(id,new ContentInput("article",slug,slug,"摘要","新正文",n(published,"lockVersion"),null,null,List.of(n(nextTag,"id")),null,List.of(),null));
+        var visible=(List<Map<String,Object>>)contents.list(true,"article","all",slug,1,10).get("items");
+        assertThat(visible).hasSize(1);
+        assertThat((List<String>)visible.get(0).get("tagNames")).containsExactly(oldTag.get("name").toString());
+        var working=(List<Map<String,Object>>)contents.list(false,"article","all",slug,1,10).get("items");
+        assertThat((List<String>)working.get(0).get("tagNames")).containsExactly(nextTag.get("name").toString());
+        contents.publish(id,n(changed,"lockVersion"));
+        visible=(List<Map<String,Object>>)contents.list(true,"article","all",slug,1,10).get("items");
+        assertThat((List<String>)visible.get(0).get("tagNames")).containsExactly(nextTag.get("name").toString());
+    }
+
     @Test void gifAvatarPreservesAnimationAndUsesSiteReferenceProtection() throws Exception {
         var original=site.read();var asset=media.upload(new MockMultipartFile("file","avatar.gif","image/gif",GifFixtures.animation(2)));long id=n(asset,"id");
         mvc.perform(get("/api/public/media/"+id)).andExpect(status().isNotFound());

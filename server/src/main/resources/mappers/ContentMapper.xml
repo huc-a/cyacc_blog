@@ -25,7 +25,8 @@
   <select id="list" resultType="map">
     SELECT c.id,c.content_type,c.slug,c.publish_status,c.lock_version,c.deleted_at,c.updated_at,c.first_published_at,c.last_published_at,
       r.id AS revision_id,r.revision_no,r.title,r.summary,r.revision_state,r.category_id,r.cover_asset_id,
-      (SELECT name FROM category k WHERE k.id=r.category_id) AS category_name
+      (SELECT name FROM category k WHERE k.id=r.category_id) AS category_name,
+      ARRAY(SELECT t.name FROM tag t JOIN revision_tag rt ON rt.tag_id=t.id WHERE rt.revision_id=r.id ORDER BY t.name) AS tag_names
     <include refid="source"/>
     ORDER BY <choose><when test="publicOnly">c.last_published_at</when><otherwise>c.updated_at</otherwise></choose> DESC,c.id DESC
     LIMIT #{size} OFFSET #{offset}
