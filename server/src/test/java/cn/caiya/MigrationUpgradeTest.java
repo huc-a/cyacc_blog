@@ -16,7 +16,7 @@ class MigrationUpgradeTest {
         String schemaUrl=url+(url.contains("?")?"&":"?")+"currentSchema="+schema;
         try(var connection=DriverManager.getConnection(schemaUrl,user,password);var sql=connection.createStatement()) {
             sql.executeUpdate("UPDATE site_setting SET value_jsonb=value_jsonb || '{\"author\":\"原有作者\",\"email\":\"keep@example.com\",\"background\":\"blue\"}'::jsonb,lock_version=7 WHERE setting_key='site.public'");
-            Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).load().migrate();
+            Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).target("3").load().migrate();
             try(var result=sql.executeQuery("SELECT value_jsonb::text,lock_version,schema_version FROM site_setting WHERE setting_key='site.public'")) {
                 assertThat(result.next()).isTrue();
                 var value=new com.fasterxml.jackson.databind.ObjectMapper().readTree(result.getString(1));
@@ -33,6 +33,30 @@ class MigrationUpgradeTest {
             try(var connection=DriverManager.getConnection(url,user,password);var sql=connection.createStatement()) {sql.execute("DROP SCHEMA "+schema+" CASCADE");}
         }
     }
+    @Test void upgradingV3PreservesImagesContactsAndAdministrator() throws Exception {
+        String url=System.getenv().getOrDefault("TEST_DB_URL","jdbc:postgresql://127.0.0.1:55432/caiya_test");
+        if(!url.split("\\?")[0].endsWith("_test")) throw new IllegalStateException("Requires isolated test database");
+        String user=System.getenv().getOrDefault("TEST_DB_USER","caiya"),password=System.getenv().getOrDefault("TEST_DB_PASSWORD","");
+        String schema="upgrade_"+UUID.randomUUID().toString().replace("-","");
+        Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).target("3").load().migrate();
+        try(var connection=DriverManager.getConnection(url+(url.contains("?")?"&":"?")+"currentSchema="+schema,user,password);var sql=connection.createStatement()) {
+            sql.executeUpdate("INSERT INTO admin_user(username,password_hash,display_name,lock_version) VALUES('before-upgrade','test-only-hash','原管理员',4)");
+            sql.executeUpdate("INSERT INTO media_asset(storage_key,original_name,mime_type,size_bytes,width,height,sha256) VALUES('keep.png','keep.png','image/png',10,1,1,repeat('a',64))");
+            sql.executeUpdate("UPDATE site_setting SET value_jsonb=value_jsonb || '{\"avatarAssetId\":1,\"backgroundAssetId\":1,\"icpNumber\":\"桂ICP备2026024037号\",\"email\":\"keep@example.com\"}'::jsonb,lock_version=9");
+            Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).load().migrate();
+            try(var rows=sql.executeQuery("SELECT value_jsonb::text,lock_version,schema_version FROM site_setting WHERE setting_key='site.public'")) {
+                assertThat(rows.next()).isTrue();var value=new com.fasterxml.jackson.databind.ObjectMapper().readTree(rows.getString(1));
+                assertThat(value.path("avatarAssetId").asInt()).isEqualTo(1);assertThat(value.path("backgroundAssetId").asInt()).isEqualTo(1);
+                assertThat(value.path("icpNumber").asText()).isEqualTo("桂ICP备2026024037号");assertThat(value.path("email").asText()).isEqualTo("keep@example.com");
+                assertThat(value.path("policeNumber").asText()).isEmpty();assertThat(value.get("loginBackgroundAssetId").isNull()).isTrue();
+                assertThat(rows.getInt(2)).isEqualTo(10);assertThat(rows.getInt(3)).isEqualTo(3);
+            }
+            try(var rows=sql.executeQuery("SELECT display_name,lock_version,avatar_asset_id FROM admin_user WHERE username='before-upgrade'")) {
+                assertThat(rows.next()).isTrue();assertThat(rows.getString(1)).isEqualTo("原管理员");assertThat(rows.getInt(2)).isEqualTo(5);assertThat(rows.getObject(3)).isNull();
+            }
+        } finally {try(var connection=DriverManager.getConnection(url,user,password);var sql=connection.createStatement()) {sql.execute("DROP SCHEMA "+schema+" CASCADE");}}
+    }
+
     @Test void upgradingV1KeepsPublishedArticleAndAddsNewSchema() throws Exception {
         String url=System.getenv().getOrDefault("TEST_DB_URL","jdbc:postgresql://127.0.0.1:55432/caiya_test");
         if(!url.split("\\?")[0].endsWith("_test")) throw new IllegalStateException("Requires isolated test database");

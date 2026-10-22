@@ -16,10 +16,13 @@ public record SiteSettings(
     @NotEmpty @Size(max=5) List<@Pattern(regexp="article|work|tutorial|website|deal") String> homeModules,
     @Positive Long avatarAssetId, @NotNull @Size(max=80) String icpNumber,
     @DecimalMin("0") @DecimalMax("1") Double navTopOpacity,
-    @DecimalMin("0.5") @DecimalMax("1") Double navScrolledOpacity
+    @DecimalMin("0.5") @DecimalMax("1") Double navScrolledOpacity,
+    @NotNull @Size(max=80) @Pattern(regexp="|[\\p{IsHan}]{1,12}公网安备\\s*[0-9]{14}号") String policeNumber,
+    @Positive Long loginBackgroundAssetId
 ) {
     public SiteSettings {
         icpNumber=icpNumber==null?"":icpNumber;
+        policeNumber=policeNumber==null?"":policeNumber.strip();
         navTopOpacity=navTopOpacity==null?0.0:navTopOpacity;
         navScrolledOpacity=navScrolledOpacity==null?0.92:navScrolledOpacity;
     }
