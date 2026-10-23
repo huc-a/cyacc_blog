@@ -30,6 +30,7 @@ class AnalyticsTest {
         try {
             var ok=new AnalyticsService(url,"",id,"fixture-token",new ObjectMapper()).overview(today,today);
             assertThat(ok.get("status")).isEqualTo("available");assertThat(ok.toString()).doesNotContain("fixture-token");
+            assertThat(ok.get("metricUnits")).isEqualTo(Map.of("url","pageviews","sessions","sessions"));
             assertThat(((JsonNode)ok.get("overview")).path("pageviews").path("prev").asInt()).isEqualTo(2);
             var failure=new AnalyticsService(url,"",id,"wrong",new ObjectMapper()).overview(today,today);
             assertThat(failure.get("status")).isEqualTo("unavailable");assertThat(failure).doesNotContainKey("overview");
@@ -52,6 +53,7 @@ class AnalyticsTest {
             var date=LocalDate.of(2026,10,21);
             var result=new AnalyticsService("http://unused.invalid","http://127.0.0.1:"+server.getAddress().getPort()+"/v1/eu/","11111111-1111-1111-1111-111111111111","cloud-key",new ObjectMapper()).overview(date,date);
             assertThat(result.get("status")).isEqualTo("available");
+            assertThat(result.get("metricUnits")).isEqualTo(Map.of("url","visitors","sessions","visitors"));
             var overview=(JsonNode)result.get("overview");
             assertThat(overview.path("pageviews").path("value").asInt()).isEqualTo(12);
             assertThat(overview.path("visitors").path("value").asInt()).isEqualTo(3);

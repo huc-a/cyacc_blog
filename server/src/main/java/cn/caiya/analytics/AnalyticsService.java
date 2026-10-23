@@ -30,6 +30,7 @@ public class AnalyticsService {
             var result=new LinkedHashMap<String,Object>();result.put("status","available");result.put("start",start);result.put("end",end);
             var stats=get("stats"+range+"&compare=prev");
             boolean modern=stats.path("pageviews").isNumber();
+            result.put("metricUnits",Map.of("url",modern?"visitors":"pageviews","sessions",modern?"visitors":"sessions"));
             result.put("overview",normalizeStats(stats));
             result.put("trend",series(get("pageviews"+range+"&unit=day&timezone=Asia%2FShanghai")));
             for(String metric:List.of("referrer","device","browser","url")) {

@@ -1,0 +1,4 @@
+*-credentials.json
+integration.json
+*.tmp
+acceptance-result.json

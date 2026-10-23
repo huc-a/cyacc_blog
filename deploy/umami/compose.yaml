@@ -1,0 +1,52 @@
+name: cyacc-umami
+services:
+  db:
+    image: postgres:18.6-bookworm@sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc
+    restart: unless-stopped
+    mem_limit: 192m
+    memswap_limit: 256m
+    pids_limit: 100
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      UMAMI_DB_PASSWORD: ${UMAMI_DB_PASSWORD:?Set UMAMI_DB_PASSWORD}
+      TZ: UTC
+    command: [postgres, -c, shared_buffers=32MB, -c, work_mem=2MB, -c, maintenance_work_mem=32MB, -c, max_connections=30, -c, timezone=UTC]
+    volumes:
+      - database:/var/lib/postgresql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/01-umami.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d umami']
+      interval: 5s
+      retries: 20
+    networks: [database]
+  umami:
+    image: ${UMAMI_IMAGE:-ghcr.io/umami-software/umami:3.4.0@sha256:85909afc45bdcda1917394594a087421fdbb05610fded0fa9f6fb861abb2f367}
+    init: true
+    restart: unless-stopped
+    mem_limit: 384m
+    memswap_limit: 512m
+    pids_limit: 150
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:?Set UMAMI_DB_PASSWORD}@db:5432/umami
+      APP_SECRET: ${APP_SECRET:?Set APP_SECRET}
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:?Set TWO_FACTOR_ENCRYPTION_KEY}
+      NODE_OPTIONS: --max-old-space-size=192
+      TZ: UTC
+    ports: ["127.0.0.1:3010:3000"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:3000/api/heartbeat]
+      interval: 10s
+      start_period: 60s
+      retries: 18
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [database, web]
+volumes:
+  database:
+networks:
+  database: { internal: true }
+  web:
