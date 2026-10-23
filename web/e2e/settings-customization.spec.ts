@@ -43,10 +43,14 @@ test('police placeholder and login wallpaper can be saved selected and removed',
     await page.setViewportSize({ width: 981, height: 828 }); await page.goto('/admin/settings')
     await expect(page.getByLabel('公安备案号', { exact: true })).toHaveAttribute('placeholder', /办理中/)
     const filename = `login-wallpaper-${Date.now()}.gif`
+    const upload = page.waitForResponse(r => new URL(r.url()).pathname === '/api/admin/media' && r.request().method() === 'POST')
     await page.getByLabel('上传自定义登录页壁纸', { exact: true }).setInputFiles({ name: filename, mimeType: 'image/gif', buffer: gif })
+    const uploaded = await upload
+    expect(uploaded.ok()).toBeTruthy()
+    assetId = (await uploaded.json()).id
+    expect(assetId).toBeGreaterThan(0)
     const preview = page.getByRole('img', { name: '自定义登录页壁纸预览', exact: true })
-    await expect(preview).toBeVisible()
-    assetId = Number((await preview.getAttribute('src'))!.match(/media\/(\d+)/)![1])
+    await expect(preview).toHaveAttribute('src', `/api/admin/media/${assetId}/file`)
     expect((await (await request.get('/api/public/site')).json()).loginBackgroundAssetId).toBe(initial.settings.loginBackgroundAssetId)
     await page.getByLabel('公安备案号', { exact: true }).fill('桂公网安备45010302001234号')
     await saveSite()
@@ -97,10 +101,14 @@ test('administrator avatar persists privately and can be selected or removed', a
   try {
     await page.goto('/admin/settings')
     const filename = `admin-avatar-${Date.now()}.gif`
+    const upload = page.waitForResponse(r => new URL(r.url()).pathname === '/api/admin/media' && r.request().method() === 'POST')
     await page.getByLabel('上传自定义管理员头像', { exact: true }).setInputFiles({ name: filename, mimeType: 'image/gif', buffer: gif })
+    const uploaded = await upload
+    expect(uploaded.ok()).toBeTruthy()
+    assetId = (await uploaded.json()).id
+    expect(assetId).toBeGreaterThan(0)
     const preview = page.getByRole('img', { name: '自定义管理员头像预览', exact: true })
-    await expect(preview).toBeVisible()
-    assetId = Number((await preview.getAttribute('src'))!.match(/media\/(\d+)/)![1])
+    await expect(preview).toHaveAttribute('src', `/api/admin/media/${assetId}/file`)
     expect((await (await api.get('/api/auth/me')).json()).avatarAssetId).toBe(initial.avatarAssetId)
     await page.getByRole('button', { name: '保存管理员资料', exact: true }).click()
     await expect(page.getByRole('button', { name: '保存管理员资料', exact: true })).toBeDisabled()
