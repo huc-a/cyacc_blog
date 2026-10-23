@@ -28,6 +28,23 @@ services:
     depends_on:
       db: { condition: service_healthy }
     networks: [private]
+  media-init:
+    image: caiya-server:${RELEASE_TAG:-local}
+    user: "0:0"
+    entrypoint: [/bin/sh, -ec]
+    # Existing/restored volumes do not inherit the image directory's owner.
+    # Change only the volume root; never recursively alter uploaded files.
+    command: ["test -d /app/uploads && test ! -L /app/uploads && chmod u+rwx /app/uploads && chown 10001:10001 /app/uploads"]
+    volumes:
+      - type: volume
+        source: uploads
+        target: /app/uploads
+        volume: { nocopy: true }
+    read_only: true
+    network_mode: none
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt: ["no-new-privileges:true"]
   server:
     image: caiya-server:${RELEASE_TAG:-local}
     restart: unless-stopped
@@ -48,12 +65,13 @@ services:
     tmpfs: [/tmp]
     security_opt: ["no-new-privileges:true"]
     healthcheck:
-      test: [CMD, curl, -fsS, http://localhost:8080/api/public/site]
+      test: [CMD-SHELL, 'test -w "$$MEDIA_DIR" && test -x "$$MEDIA_DIR" && curl -fsS http://localhost:8080/api/public/site']
       interval: 10s
       start_period: 30s
       retries: 10
     depends_on:
       migrate: { condition: service_completed_successfully }
+      media-init: { condition: service_completed_successfully }
     networks: [private, outbound]
   web:
     build: { context: .., dockerfile: deploy/Dockerfile.web }
@@ -91,7 +109,11 @@ services:
       PGUSER: postgres
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
-      - uploads:/media:ro
+      - type: volume
+        source: uploads
+        target: /media
+        read_only: true
+        volume: { nocopy: true }
       - ${BACKUP_DIR:-../.local/backups}:/backups
     networks: [private]
 volumes:
