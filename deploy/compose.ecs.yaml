@@ -1,0 +1,13 @@
+# Ubuntu ECS with an existing host Nginx terminating HTTPS.
+# Always combine with compose.yaml; do not enable container-proxy on this host.
+services:
+  nginx:
+    profiles: [container-proxy]
+  server:
+    environment:
+      # Only the host Nginx or private containers can reach this listener.
+      # The host Nginx must overwrite forwarded headers using the supplied snippet.
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    ports: ["127.0.0.1:8089:8080"]
+  web:
+    ports: ["127.0.0.1:8088:3000"]
