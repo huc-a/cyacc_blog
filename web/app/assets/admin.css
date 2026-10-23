@@ -20,3 +20,5 @@
 .settings-stack .avatar-control-preview{width:90px;height:90px;border-radius:50%}
 .settings-stack .site-image-control .admin-actions{gap:6px}
 .login-screen{position:relative}.login-screen .landscape{position:fixed}
+.admin-nav{scrollbar-width:none}
+.admin-nav::-webkit-scrollbar{display:none}
