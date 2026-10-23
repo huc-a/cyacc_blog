@@ -33,5 +33,6 @@ app:
   admin-password: ${ADMIN_PASSWORD:}
   media-dir: ${MEDIA_DIR:./uploads}
   umami-url: ${UMAMI_URL:}
+  umami-api-url: ${UMAMI_API_URL:}
   umami-website-id: ${UMAMI_WEBSITE_ID:}
   umami-token: ${UMAMI_TOKEN:}

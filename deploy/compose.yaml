@@ -58,6 +58,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
       MEDIA_DIR: /app/uploads
       UMAMI_URL: ${UMAMI_URL:-}
+      UMAMI_API_URL: ${UMAMI_API_URL:-}
       UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
       UMAMI_TOKEN: ${UMAMI_TOKEN:-}
     volumes: ["uploads:/app/uploads"]
