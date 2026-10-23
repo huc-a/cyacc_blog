@@ -38,3 +38,13 @@ docker compose -f deploy/compose.yaml -f deploy/compose.ecs.yaml --env-file depl
 自建旧配置仍可使用 `UMAMI_URL=https://stats.example.com`，应用在它后面追加 `/api`。设置 `UMAMI_API_URL` 后优先使用该完整 API 端点。
 
 官方说明：[采集代码](https://docs.umami.is/docs/collect-data)、[Cloud API](https://docs.umami.is/docs/cloud/api-key)、[新版统计接口](https://docs.umami.is/docs/api-reference/get-website-stats)。
+
+## cyacc.cn 本次部署（2026-10-23）
+
+已使用用户提供的脚本与网站 ID 部署免费采集，生产 `UMAMI_TOKEN` 保持空值。运行镜像为 `ecs-2026-10-23.4`，没有新增统计服务或数据库。
+
+验证：5 项后端适配测试、6 项前端单元测试、前端类型检查、前后端 Docker 构建、Compose 检查通过。生产首页包含正确的公开追踪配置，浏览器可见正确的 Cloud script 与网站 ID 且没有脚本错误；匿名统计接口仍返回 401，无密钥时返回明确的未配置状态且不伪造图表。页面追踪去重、后台排除及参数清理已通过单元测试。
+
+Cloud 控制台没有可用的登录会话，本次没有读取账号内的统计数字；已请用户确认控制台是否收到访问记录。没有调用付费读取 API，也没有将“页面配置正确”视为“控制台已经显示数据”。
+
+更新前完整备份：`/var/backups/cyacc/backup-20261023T042401Z/`（19 张表、3 个媒体文件，校验通过）。旧配置与源文件保存在 `/var/backups/cyacc-system/20261023T042401Z-umami-cloud/`，正式媒体和站点设置保持原样。
