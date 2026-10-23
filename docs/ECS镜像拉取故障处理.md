@@ -31,4 +31,6 @@ sudo bash deploy/start-ecs.sh
 
 脚本先检查配置并拉取数据库镜像，再构建应用，成功后才启动和检查健康状态。任一步失败立即退出，保留失败状态；不会生成密码、修改 Nginx 或删除数据。完全成功后回到部署指南第 4 步完成数据库断言，再准备 Nginx 切换。
 
-本次修订只修复执行顺序与错误传播；没有在 ECS 修改 DNS、Docker 或网络，也没有把镜像超时标记为已解决。
+上述为初次诊断步骤。后续用户授权 SSH 操作后，已确认绕过 DNS 仍无法直连；核实 [DaoCloud 官方镜像服务说明](https://github.com/DaoCloud/public-image-mirror)，实测固定摘要能完整拉取后，在现有 Docker 配置中合并 `registry-mirrors: ["https://docker.m.daocloud.io"]`，校验配置并重启 Docker。该 ECS 已完成配置，无需重复操作；原 Docker 配置状态保存在 `/var/backups/cyacc-system/20261023T025724Z/`。
+
+实际构建又发现旧 Node 摘要是空索引，已使用与 Docker Hub 官方 API 核对一致、包含 linux/amd64 的新固定摘要修复，见 `ecs-2026-10-23.2` 修订包。前后端和运维镜像均已成功构建，网站已上线。不要继续使用最初源码包中的旧 Node 摘要，也不要为处理网络问题删除生产数据卷。镜像服务并非可用性保证，后续更新仍应以真实拉取、摘要和平台核验为准。

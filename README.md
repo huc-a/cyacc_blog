@@ -55,4 +55,4 @@ v1.4.0 完整验收：33 项后端测试、3 项 Markdown 测试、18 条 Chrome
 
 回滚标签：`v0.0.0-plan`、`v0.1.0-core`、`v0.2.0-services`、`v0.3.0-public`、`v0.4.0-admin`、`v1.0.0`、`v1.1.0`、`v1.2.0`、`v1.3.0`、`v1.4.0`、`v1.4.1`。
 
-尚未配置 GitHub、公网服务器或真实 Umami。Compose/CI 文件已提供；本机无 Docker 引擎，容器启动与云端 CI 需在目标环境验收。依赖扫描的 4 项限定告警及复核期限已记录，不宣称“零漏洞”。
+cyacc.cn 已于 2026-10-23 在 ECS 上线，实际容器、生产权限、HTTPS、隔离恢复和桌面/手机检查通过，见 [ECS 上线记录](docs/ECS上线记录.md)。新部署使用 `ecs-2026-10-23.2` 修订包；打包前可运行 `python scripts/check-image-manifests.py`，验证固定镜像摘要包含 linux/amd64。GitHub 远程、云端 CI、真实 Umami 与异地定期备份尚未配置。依赖扫描的 4 项限定告警及复核期限已记录，不宣称“零漏洞”。

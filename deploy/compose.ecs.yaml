@@ -11,3 +11,5 @@ services:
     ports: ["127.0.0.1:8089:8080"]
   web:
     ports: ["127.0.0.1:8088:3000"]
+    # Docker does not publish ports for a container attached only to internal networks.
+    networks: [private, outbound]

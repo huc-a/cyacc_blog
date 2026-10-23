@@ -4,6 +4,8 @@
 
 部署版本：`ecs-2026-10-23`。下列命令以 Bash 和有 sudo 权限的账号为前提。每一步成功后再进行下一步；失败时保留错误信息，不继续切换网站。
 
+源码包已修订至 `ecs-2026-10-23.2`，修复实机发现的 Node 镜像空索引和前端端口发布问题；运行目录与镜像标签继续使用上述部署版本。本 ECS 已完成上线，不需要重复初始化；现状、备份和回滚位置见 [ECS 上线记录](ECS上线记录.md)。
+
 ## 结构与边界
 
 ```text
@@ -62,11 +64,11 @@ sudo docker compose version
 
 ## 3. 上传部署包，生成生产配置
 
-将提供的 `cyacc-ecs-2026-10-23.tar.gz` 和 `cyacc-ecs-2026-10-23.sha256` 上传至 ECS 的 `/tmp/`，可使用你现有的 SFTP/SSH 文件传输工具。部署包只有版本控制中的源码、配置和文档，不含开发库、密码、上传图片或备份。
+将提供的 `cyacc-ecs-2026-10-23.2.tar.gz` 和 `cyacc-ecs-2026-10-23.2.sha256` 上传至 ECS 的 `/tmp/`，可使用你现有的 SFTP/SSH 文件传输工具。部署包只有版本控制中的源码、配置和文档，不含开发库、密码、上传图片或备份。
 
 ```bash
 cd /tmp
-sha256sum -c cyacc-ecs-2026-10-23.sha256
+sha256sum -c cyacc-ecs-2026-10-23.2.sha256
 ```
 
 必须显示 `OK` 后再解压。目标版本目录应当不存在；若已存在，先核对是否执行过部署，不要删除或覆盖它。
@@ -74,7 +76,7 @@ sha256sum -c cyacc-ecs-2026-10-23.sha256
 ```bash
 sudo install -d -m 0755 /opt/cyacc/releases
 sudo mkdir /opt/cyacc/releases/ecs-2026-10-23
-sudo tar -xzf /tmp/cyacc-ecs-2026-10-23.tar.gz \
+sudo tar -xzf /tmp/cyacc-ecs-2026-10-23.2.tar.gz \
   -C /opt/cyacc/releases/ecs-2026-10-23 --no-same-owner
 cd /opt/cyacc/releases/ecs-2026-10-23
 sudo bash deploy/init-ecs-env.sh
@@ -267,4 +269,4 @@ sudo bash deploy/rollback-nginx-ecs.sh /var/backups/cyacc-nginx/实际时间目�
 
 已准备：ECS Compose 覆盖配置、现有 Nginx 配置片段、生产随机密码初始化、Nginx 备份/回滚、ECS 备份脚本。部署包基于已通过应用测试的版本，无开发数据。
 
-本机已通过：合并 Compose 配置解析与端口/角色检查、脚本语法、四个独立随机密码与拒绝重复初始化、Nginx 配置语法、真实 Java 服务的可信转发地址分来源限流测试。临时本机 Nginx 进程启动被自动审批拦截（仅返回 `blocked by policy`），所以没有把代理端到端测试记为通过。本机也没有 Docker Engine，实际镜像构建/容器启动、完整代理链及现有证书仍由以上 ECS 步骤验收。
+初次本机准备已通过 Compose、脚本、随机密码初始化、Nginx 语法与 Java 转发地址检查；当时本机没有 Docker Engine，临时 Nginx 启动被自动审批拦截，没有将代理端到端测试记为通过。2026-10-23 已在用户授权的 ECS 补齐实际镜像构建、容器启动、隔离 HTTPS 46 项验收、生产权限与空库检查、生产 HTTPS 检查、真实浏览器桌面/手机检查和备份恢复；详细结果见 [ECS 上线记录](ECS上线记录.md)。
