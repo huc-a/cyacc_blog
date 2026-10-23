@@ -90,15 +90,20 @@ sudo install -d -m 0700 /var/backups/cyacc
 以下命令都在 `/opt/cyacc/releases/ecs-2026-10-23` 执行；始终带两个 Compose 文件。
 
 ```bash
-sudo docker compose -f deploy/compose.yaml -f deploy/compose.ecs.yaml \
-  --env-file deploy/.env config --quiet
-sudo docker compose -f deploy/compose.yaml -f deploy/compose.ecs.yaml \
-  --env-file deploy/.env build
-sudo docker compose -f deploy/compose.yaml -f deploy/compose.ecs.yaml \
-  --env-file deploy/.env up -d --wait --wait-timeout 300
-sudo docker compose -f deploy/compose.yaml -f deploy/compose.ecs.yaml \
-  --env-file deploy/.env ps -a
+(
+  set -euo pipefail
+  compose=(sudo docker compose -f deploy/compose.yaml -f deploy/compose.ecs.yaml --env-file deploy/.env)
+  "${compose[@]}" config --quiet
+  "${compose[@]}" pull db
+  "${compose[@]}" build migrate web
+  "${compose[@]}" up -d --pull never --wait --wait-timeout 300
+  "${compose[@]}" ps -a
+)
 ```
+
+这是一个遇错停止的子 Shell：下载或构建失败时不会继续启动。只有整个代码块成功后再运行下方健康检查。若收到 `registry-1.docker.io ... i/o timeout`，先按 [镜像拉取故障处理](ECS镜像拉取故障处理.md) 检查服务器网络；后续连接失败与 JSON 解析失败不能作为应用故障判断。已生成的 `deploy/.env` 应保留，不必重新初始化。
+
+补充提供的 `deploy/start-ecs.sh` 包含相同的启动流程和 HTTP 健康检查；如原始源码包中没有此脚本，可单独下载并放入现有版本的 `deploy/`，用 `sudo bash deploy/start-ecs.sh` 执行。它不会修改现有密码、Nginx 配置或清空数据卷。
 
 数据库、server、web 应为运行/健康状态；migrate 正常完成后是 `Exited (0)`，不是需要常驻的服务。容器 Nginx 不应启动；不要启用 `container-proxy` profile。
 
