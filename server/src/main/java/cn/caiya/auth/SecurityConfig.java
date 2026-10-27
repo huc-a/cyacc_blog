@@ -25,8 +25,7 @@ public class SecurityConfig {
         return name -> {
             var u=mapper.find(name);
             if(u==null) throw new UsernameNotFoundException("账号或密码错误");
-            return User.withUsername(name).password((String)u.get("password_hash")).roles("ADMIN")
-                .disabled(!Boolean.TRUE.equals(u.get("enabled"))).build();
+            return new AdminPrincipal(u);
         };
     }
     @Bean ApplicationRunner initialize(AuthMapper mapper, PasswordEncoder encoder,
@@ -52,7 +51,8 @@ public class SecurityConfig {
             .exceptionHandling(e->e.authenticationEntryPoint((req,res,x)->jsonError(res,401,"请先登录"))
                 .accessDeniedHandler((req,res,x)->jsonError(res,403,"权限不足或安全令牌已失效，请刷新页面")))
             .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'none'; frame-ancestors 'none'")))
-            .addFilterBefore(new LoginRateLimit(),UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new LoginRateLimit(),UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new ActiveAccountFilter(mapper),org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         return http.build();
     }
     static void jsonError(HttpServletResponse res,int status,String message) throws IOException {
