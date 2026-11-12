@@ -83,7 +83,7 @@
 .profile-hero .account-avatar{width:76px;height:76px;font-size:30px}
 .profile-hero h2{margin:0 0 6px}
 .profile-hero p{margin:0;color:#85917a;font-size:12px;line-height:1.9}
-.import-drop{border:1.5px dashed #b9c7a4;border-radius:12px;padding:26px;text-align:center;color:#74855f;font-size:12px;line-height:2;background:#f7f9f1;cursor:pointer}
+.import-drop{display:block;margin-top:14px;border:1.5px dashed #b9c7a4;border-radius:12px;padding:26px;text-align:center;color:#74855f;font-size:12px;line-height:2;background:#f7f9f1;cursor:pointer}
 .import-drop:hover{border-color:#54703f}
 .import-result{margin-top:16px;font-size:12px;line-height:2}
 .import-result .fail{color:#a66b65}

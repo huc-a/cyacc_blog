@@ -42,7 +42,7 @@ async function exportContents() {
     <AdminPageHead title="系统设置" subtitle="背景、登录页壁纸、默认封面和数据导出。站点名称、作者介绍在「网站信息」里维护。">
       <button class="primary" :disabled="busy || uploadingWallpaper || uploadingDefaultCover || !siteDirty" @click="save">保存设置</button>
     </AdminPageHead>
-    <div class="settings-grid">
+    <div style="max-width:880px">
       <section class="studio-panel">
         <h2>背景</h2>
         <div class="scene-options">
@@ -62,17 +62,11 @@ async function exportContents() {
         <p class="admin-footnote">内容未设置封面时会使用这张图片。</p>
         <div class="settings-divider" />
         <h2>数据导出与备份</h2>
-        <p class="admin-footnote">导出当前工作版本、标签和网站设置，便于整理内容。文章也可以在「文章管理」里用 Markdown 批量导入。图片文件和历史版本需要随数据库一起备份。</p>
+        <p class="admin-footnote">导出当前工作版本、标签和网站设置，便于整理内容。写文章时可以在新建文章页把 Markdown 文件直接载入编辑器。图片文件和历史版本需要随数据库一起备份。</p>
         <button :disabled="busy" @click="exportContents">导出内容 JSON</button>
         <div class="help-note">完整备份与恢复：使用项目提供的备份脚本，同时保存数据库与上传目录。恢复前先在隔离环境验证。</div>
       </section>
-      <aside class="settings-stack">
-        <section class="studio-panel">
-          <h2>相关入口</h2>
-          <NuxtLink to="/admin/site-info" class="text-link">网站信息（名称 / 头像 / 备案）→</NuxtLink>
-          <NuxtLink to="/admin/logs" class="text-link">查看操作日志 →</NuxtLink>
-        </section>
-      </aside>
+      
     </div>
   </div>
 </template>

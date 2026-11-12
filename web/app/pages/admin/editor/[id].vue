@@ -25,19 +25,50 @@ const categories = computed(() => (taxonomy.value?.categories || []).map((c: Cat
 const revisions = ref<{ id: number; revisionNo: number; title: string; revisionState: string; changeNote?: string }[]>([])
 const showHistory = ref(false)
 useUnsavedChanges(dirty); useSeoMeta({ title: () => `${item.value ? '编辑' : '新建'}${sectionOf(form.type).label}` })
-const importFiles = ref<File[]>([]), importing = ref(false), importResult = ref<{ created: number; items: { id: number; title: string; slug: string }[]; failed: { file: string; reason: string }[] } | null>(null)
-function pickImportFiles(event: Event) { importFiles.value = Array.from((event.target as HTMLInputElement).files || []); importResult.value = null }
-async function runImport() {
-  if (!importFiles.value.length) return
-  importing.value = true
+const importNote = ref('')
+async function loadMarkdown(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]; input.value = ''
+  if (!file) return
   try {
-    const data = new FormData()
-    for (const file of importFiles.value) data.append('files', file)
-    if (form.categoryId) data.append('categoryId', String(form.categoryId))
-    if (form.tagIds.length) data.append('tagIds', form.tagIds.join(','))
-    importResult.value = await api('/api/admin/contents/import', { method: 'POST', body: data })
-    if (importResult.value!.created) message.success(`已导入 ${importResult.value!.created} 篇草稿`)
-  } catch (e) { message.error(errorText(e)) } finally { importing.value = false }
+    let body = (await file.text()).replace(/^\uFEFF/, '')
+    let title = '', summary = ''
+    const tagNames: string[] = []
+    const fm = body.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/)
+    if (fm) {
+      body = body.slice(fm[0].length).trimStart()
+      const lines = (fm[1] || '').split(/\r?\n/)
+      for (let i = 0; i < lines.length; i++) {
+        const kv = (lines[i] || '').match(/^([A-Za-z_-]+):\s*(.*)$/)
+        if (!kv) continue
+        const key = (kv[1] || '').toLowerCase(), value = (kv[2] || '').trim().replace(/^["']|["']$/g, '')
+        if (key === 'title') title = value
+        else if (key === 'summary' || key === 'description') summary = value
+        else if (key === 'tags') {
+          if (value.startsWith('[')) tagNames.push(...value.replace(/^\[|\]$/g, '').split(',').map(x => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean))
+          else if (value) tagNames.push(value)
+          else for (let j = i + 1; j < lines.length; j++) { const d = (lines[j] || '').match(/^\s*-\s*(.+?)\s*$/)?.[1]; if (!d) break; tagNames.push(d.replace(/^["']|["']$/g, '')) }
+        }
+      }
+    }
+    if (!title) { const h1 = body.match(/^#\s+(.+?)\s*$/m); if (h1?.[1]) title = h1[1] }
+    if (title) { form.title = title; body = body.replace(new RegExp(`^#\\s+${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\r?\\n+`), '') }
+    if (summary) form.summary = summary
+    form.bodyMarkdown = body.trimStart()
+    let created = 0
+    if (tagNames.length) {
+      const known = new Map((taxonomy.value?.tags || []).map(t => [t.name, t.id]))
+      const ids = new Set(form.tagIds)
+      for (const name of [...new Set(tagNames)]) {
+        if (known.has(name)) ids.add(known.get(name)!)
+        else { try { const t = await api<Taxon>('/api/admin/taxonomy/tags', { method: 'POST', body: { name } }); ids.add(t.id); created++ } catch { /* skip unusable tag names */ } }
+      }
+      form.tagIds = [...ids]
+      if (created) await refreshNuxtData()
+    }
+    importNote.value = `已载入${title ? `《${title}》` : ` ${file.name}`}：正文 ${form.bodyMarkdown.length} 字${tagNames.length ? `，标签 ${tagNames.length} 个已带入${created ? `（其中新建 ${created} 个）` : ''}` : ''}。在上面选好分类、检查内容后，点「保存草稿」即可。`
+    message.success('Markdown 已载入当前文章')
+  } catch (e) { message.error(errorText(e)) }
 }
 async function save(publish = false) {
   if (form.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.slug)) { message.error('访问地址只能用小写英文、数字和连字符'); return }
@@ -77,7 +108,7 @@ async function verify(result: string) {
 </script>
 <template><div class="editor-page"><div class="editor-topbar"><div class="editor-identity"><NuxtLink :to="`/admin/${sectionOf(form.type).path}`" class="editor-back" aria-label="返回列表" title="返回列表">←</NuxtLink><div class="editor-heading"><strong>{{ item ? '编辑' : '新建' }}{{ sectionOf(form.type).label }}</strong><div class="editor-state"><span class="state-badge" :class="item?.publishStatus || 'draft'">{{ statusText(item?.publishStatus || 'draft') }}</span><small role="status" :class="{ 'dirty-indicator': dirty }">{{ busy ? '正在保存…' : dirty ? '有未保存修改' : item ? '已保存' : '新草稿' }}</small></div></div></div><div class="admin-actions editor-actions"><div class="editor-view-actions"><button v-if="item" class="quiet" @click="history">版本</button></div><div class="editor-save-actions"><button :disabled="busy" title="保存草稿（Ctrl / ⌘ + S）" @click="save()">保存草稿</button><button class="primary" :disabled="busy" @click="save(true)">{{ item?.publishStatus === 'published' ? '更新发布' : '发布' }}</button></div></div></div><div class="editor-grid"><section class="studio-panel editor-paper"><label class="sr-only" for="content-title">标题</label><input id="content-title" v-model="form.title" class="editor-title" maxlength="200" placeholder="写下一个标题…"><label class="sr-only" for="content-summary">摘要</label><textarea id="content-summary" v-model="form.summary" class="editor-summary" maxlength="5000" placeholder="添加一段摘要…" rows="3" /><div class="editor-tabs"><button :class="{ active: !previewInline }" @click="previewInline = false">Markdown</button><button :class="{ active: previewInline }" @click="previewInline = true">阅读预览</button><small>{{ form.bodyMarkdown.length }} 字符</small></div><div v-if="!previewInline" class="editor-toolbar"><button @click="insert('## 小标题\n')" title="插入标题">H₂</button><button @click="insert('**加粗文字**')" title="插入加粗">B</button><button @click="insert('[链接文字](https://example.com)')" title="插入链接">↗ 链接</button><button @click="insert('\n```\n代码\n```\n')" title="插入代码">&lt;/&gt;</button><button @click="pick('body')">◫ 插入图片</button></div><textarea v-if="!previewInline" ref="bodyInput" v-model="form.bodyMarkdown" aria-label="正文" class="editor-body" maxlength="500000" placeholder="从这里开始，慢慢写下来…" /><MarkdownBody v-else :source="form.bodyMarkdown" preview /><div class="editor-bottom"><span>Ctrl / ⌘ + S 保存草稿</span><span>工作稿与公开版本独立</span></div>
       <section v-if="form.type === 'tutorial'" class="chapter-editor"><div class="panel-heading"><h2>教程章节</h2><button @click="addChapter">＋ 添加章节</button></div><article v-for="(c, index) in form.details.chapters" :key="c.chapterKey" class="chapter-editor-item"><div class="chapter-editor-head"><strong>第 {{ index + 1 }} 章</strong><div><button :disabled="index === 0" @click="moveChapter(index, -1)" :aria-label="`上移第${index + 1}章`">↑</button><button :disabled="index === form.details.chapters!.length - 1" @click="moveChapter(index, 1)" :aria-label="`下移第${index + 1}章`">↓</button><button class="danger" @click="form.details.chapters!.splice(index, 1)">移除</button></div></div><label :for="`chapter-title-${index}`">章节标题</label><input :id="`chapter-title-${index}`" v-model="c.title" maxlength="200"><label :for="`chapter-slug-${index}`">章节地址</label><input :id="`chapter-slug-${index}`" v-model="c.slug" maxlength="120"><label :for="`chapter-body-${index}`">章节正文</label><textarea :id="`chapter-body-${index}`" v-model="c.bodyMarkdown" rows="8" maxlength="200000" /></article><p v-if="!form.details.chapters?.length" class="admin-empty">整个教程与章节一起发布。先添加第一章吧。</p></section>
-    </section><aside class="editor-settings"><section class="studio-panel"><h2>发布设置</h2><div v-if="item" class="field"><label for="content-slug">访问地址</label><input id="content-slug" v-model="form.slug" disabled placeholder="a-quiet-place" maxlength="160"><small>创建后固定，不可修改。</small></div><div v-else class="field"><label>访问地址</label><small style="margin:0">保存后自动生成数字编号（如 /articles/12），不用手填。</small></div><div v-if="form.type === 'article'" class="field"><label>&#20998;&#31867;</label><NSelect v-model:value="form.categoryId" :options="categories" clearable filterable placeholder="&#36873;&#25321;&#20998;&#31867;" aria-label="&#20869;&#23481;&#20998;&#31867;" /></div><div class="field"><label>标签</label><NSelect v-model:value="form.tagIds" :options="tags" multiple filterable placeholder="选择标签" aria-label="内容标签" /></div><NuxtLink to="/admin/taxonomy" class="text-link">&#31649;&#29702;&#20998;&#31867;&#19982;&#26631;&#31614; ↗</NuxtLink><div class="field"><label for="change-note">版本说明</label><input id="change-note" v-model="form.changeNote" maxlength="500" placeholder="记录这次修改的原因"></div><div class="help-note">保存草稿不会影响已发布内容；点击发布后，前台才会更新。</div></section><section v-if="!item && form.type === 'article'" class="studio-panel"><h2>从 Markdown 导入</h2><p class="admin-footnote" style="margin-top:0">已经有写好的 .md 文章？在这里批量导入成草稿，会自动用上面选好的分类和标签；文件开头的 front-matter 也会被识别。</p><label class="import-drop"><input type="file" accept=".md,.markdown" multiple hidden @change="pickImportFiles">{{ importFiles.length ? `已选择 ${importFiles.length} 个文件` : '点击选择 .md 文件（可多选）' }}</label><div v-if="importResult" class="import-result"><p>成功导入 {{ importResult.created }} 篇：</p><p v-for="it in importResult.items" :key="it.id"><NuxtLink :to="`/admin/editor/${it.id}`">{{ it.title }} → 继续编辑</NuxtLink></p><p v-for="f in importResult.failed" :key="f.file" class="fail">{{ f.file }}：{{ f.reason }}</p></div><button class="primary" :disabled="!importFiles.length || importing" style="margin-top:14px" @click="runImport">{{ importing ? '正在导入…' : '导入为草稿' }}</button></section><section class="studio-panel"><h2>封面图片</h2><img v-if="form.coverAssetId" class="editor-cover" :src="`/api/admin/media/${form.coverAssetId}/file`" alt="封面预览"><div class="admin-actions"><button @click="pick('cover')">选择封面</button><button v-if="form.coverAssetId" @click="form.coverAssetId = null">移除</button></div></section>
+    </section><aside class="editor-settings"><section class="studio-panel"><h2>发布设置</h2><div v-if="item" class="field"><label for="content-slug">访问地址</label><input id="content-slug" v-model="form.slug" disabled placeholder="a-quiet-place" maxlength="160"><small>创建后固定，不可修改。</small></div><div v-else class="field"><label>访问地址</label><small style="margin:0">保存后自动生成数字编号（如 /articles/12），不用手填。</small></div><div v-if="form.type === 'article'" class="field"><label>&#20998;&#31867;</label><NSelect v-model:value="form.categoryId" :options="categories" clearable filterable placeholder="&#36873;&#25321;&#20998;&#31867;" aria-label="&#20869;&#23481;&#20998;&#31867;" /></div><div class="field"><label>标签</label><NSelect v-model:value="form.tagIds" :options="tags" multiple filterable placeholder="选择标签" aria-label="内容标签" /></div><NuxtLink to="/admin/taxonomy" class="text-link">&#31649;&#29702;&#20998;&#31867;&#19982;&#26631;&#31614; ↗</NuxtLink><div class="field"><label for="change-note">版本说明</label><input id="change-note" v-model="form.changeNote" maxlength="500" placeholder="记录这次修改的原因"></div><div class="help-note">保存草稿不会影响已发布内容；点击发布后，前台才会更新。</div></section><section v-if="!item" class="studio-panel"><h2>从 Markdown 导入</h2><p class="admin-footnote" style="margin-top:0">已经有写好的 .md 文件？选它，标题、正文和标签会直接载入当前这篇文章；再在上面选好分类、改好内容，点保存草稿就行。</p><label class="import-drop"><input type="file" accept=".md,.markdown" hidden @change="loadMarkdown">点击选择 .md 文件</label><p v-if="importNote" class="import-result">{{ importNote }}</p></section><section class="studio-panel"><h2>封面图片</h2><img v-if="form.coverAssetId" class="editor-cover" :src="`/api/admin/media/${form.coverAssetId}/file`" alt="封面预览"><div class="admin-actions"><button @click="pick('cover')">选择封面</button><button v-if="form.coverAssetId" @click="form.coverAssetId = null">移除</button></div></section>
       <section v-if="form.type !== 'article'" class="studio-panel"><h2>{{ sectionOf(form.type).label }}信息</h2><template v-if="form.type === 'work'"><div class="field"><label for="demo-url">演示地址</label><input id="demo-url" v-model="form.details.demoUrl" type="url" placeholder="https://…"></div><div class="field"><label for="source-url">源码地址</label><input id="source-url" v-model="form.details.sourceUrl" type="url" placeholder="https://…"></div><div class="field"><label for="tech-stack">技术栈（逗号分隔）</label><input id="tech-stack" v-model="techText" placeholder="Vue, Java, PostgreSQL"></div><div class="field"><label for="project-status">项目状态</label><select id="project-status" v-model="form.details.projectStatus"><option value="planning">规划中</option><option value="developing">开发中</option><option value="released">已发布</option><option value="archived">已归档</option></select></div><button @click="pick('gallery')">＋ 添加作品截图</button><div class="editor-gallery"><div v-for="id in form.galleryAssetIds" :key="id"><img :src="`/api/admin/media/${id}/file`" alt="作品截图"><button aria-label="移除截图" @click="form.galleryAssetIds = form.galleryAssetIds.filter(x => x !== id)">×</button></div></div></template>
         <template v-if="form.type === 'tutorial'"><div class="field"><label for="difficulty">难度</label><select id="difficulty" v-model="form.details.difficulty"><option value="beginner">入门</option><option value="intermediate">进阶</option><option value="advanced">高级</option></select></div><div class="field"><label for="prerequisites">前置要求</label><textarea id="prerequisites" v-model="form.details.prerequisitesMarkdown" rows="5" /></div></template>
 

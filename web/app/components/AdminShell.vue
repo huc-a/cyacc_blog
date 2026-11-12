@@ -32,9 +32,6 @@ async function signOut() { try { await logout() } catch (e) { message.error(erro
         <NuxtLink to="/admin/analytics"><span>▥</span>数据统计</NuxtLink>
         <div class="nav-group">内容</div>
         <NuxtLink to="/admin/articles"><span>▤</span>文章管理</NuxtLink>
-        <NuxtLink to="/admin/works"><span>▣</span>作品管理</NuxtLink>
-        <NuxtLink to="/admin/tutorials"><span>▦</span>教程管理</NuxtLink>
-        <NuxtLink to="/admin/deals"><span>✦</span>羊毛管理</NuxtLink>
         <NuxtLink to="/admin/taxonomy"><span>⌗</span>分类与标签</NuxtLink>
         <div class="nav-group">站点</div>
         <NuxtLink to="/admin/media"><span>◫</span>媒体库</NuxtLink>
