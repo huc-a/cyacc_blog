@@ -1,9 +1,6 @@
 import type { Content, ContentType, SiteSettings } from '~/types'
 export const sections = [
-  { type: 'article', path: 'articles', label: '文章', icon: '▤', eyebrow: 'JOURNAL / WORDS & IDEAS', headline: '把每一次思考，认真留下。', description: '技术、阅读与日常，值得慢慢记录的片刻。' },
-  { type: 'work', path: 'works', label: '作品', icon: '◇', eyebrow: 'SELECTED PROJECTS', headline: '让想法，长成看得见的作品。', description: '从一个小小的念头，到可以分享的创造。' },
-  { type: 'tutorial', path: 'tutorials', label: '教程', icon: '☷', eyebrow: 'GUIDES / STEP BY STEP', headline: '把探索的过程，写成清楚的步骤。', description: '整理走过的路，让下一次出发更从容。' },
-  { type: 'deal', path: 'deals', label: '羊毛', icon: '✧', eyebrow: 'GOOD FINDS / LITTLE SURPRISES', headline: '发现好资源，也记清使用条件。', description: '每一条发现，都附上来源、条件与有效时间。' }
+  { type: 'article', path: 'articles', label: '文章', icon: '▤', eyebrow: 'JOURNAL / WORDS & IDEAS', headline: '把每一次思考，认真留下。', description: '技术、阅读与日常，值得慢慢记录的片刻。' }
 ] as const
 export const sectionOf = (type: ContentType) => sections.find(s => s.type === type)!
 export const contentUrl = (item: Pick<Content, 'contentType' | 'slug'>) => `/${sectionOf(item.contentType).path}/${item.slug}`
