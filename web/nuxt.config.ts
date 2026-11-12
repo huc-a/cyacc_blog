@@ -11,10 +11,9 @@ export default defineNuxtConfig({
   routeRules: {
     '/admin': { ssr: false },
     '/admin/**': { ssr: false },
-    // Public API responses are identical for every visitor; let Nitro serve
-    // short-lived cached copies instead of fanning every SSR render out to
-    // the backend. Admin and auth routes are never cached.
-    '/api/public/**': { cache: { maxAge: 60, swr: true } },
+    // NOTE: Nitro route-rule caching cannot wrap the /api proxy handler (it
+    // tries to serialize the raw proxied response stream and hangs), so
+    // public API caching is done with backend Cache-Control headers only.
     '/**': { headers: { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'Content-Security-Policy': "base-uri 'self'; object-src 'none'; frame-ancestors 'self'" } }
   }
 })
