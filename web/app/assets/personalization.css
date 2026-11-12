@@ -316,6 +316,16 @@
 @media (max-width: 1180px) {
   .site-shell .collection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (max-width: 1024px) {
+  /* 中窄屏提前把卡片改成上下堆叠，避免固定宽封面把文字挤出可视区。
+     选择器必须带 .has-cover：基础主题用 .has-cover .card-visual 锁定了 row 方向，
+     特异性不够时 flex-direction:column 不生效、只剩 width:100% 生效，文字会被挤没。 */
+  .site-shell .card-visual, .site-shell .has-cover .card-visual { flex-direction: column; gap: 14px; }
+  .site-shell .card-cover { width: 100%; height: 190px; order: 0; }
+  .site-shell .collection-toolbar { flex-direction: column; align-items: stretch; }
+  .site-shell .collection-toolbar .inline-search { width: 100%; }
+  .site-shell .collection-toolbar .inline-search input { min-width: 0; flex: 1; }
+}
 @media (max-width: 840px) {
   .site-shell .home-grid { grid-template-columns: 1fr; margin-top: -44px; }
   .site-shell .left-sidebar { display: grid; }
@@ -323,7 +333,7 @@
   .site-shell .left-sidebar .profile-art { min-height: 0; max-height: none; }
   .home-hero { min-height: 330px; border-radius: 20px; }
   .hero-inner { padding: 44px 20px 84px; }
-  .site-shell .card-visual { flex-direction: column; gap: 14px; }
+  .site-shell .card-visual, .site-shell .has-cover .card-visual { flex-direction: column; gap: 14px; }
   .site-shell .card-cover { width: 100%; height: 190px; order: 0; }
   .site-shell .reading-paper { padding: 34px 22px; }
   .site-shell .wrap { width: calc(100% - 28px); }
