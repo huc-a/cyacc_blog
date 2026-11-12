@@ -23,6 +23,7 @@ public class SiteService {
         if(settings.backgroundAssetId()!=null && media.lock(settings.backgroundAssetId())==null) throw new ApiException(400,"背景图片不存在");
         if(settings.avatarAssetId()!=null && media.lock(settings.avatarAssetId())==null) throw new ApiException(400,"头像图片不存在");
         if(settings.loginBackgroundAssetId()!=null && media.lock(settings.loginBackgroundAssetId())==null) throw new ApiException(400,"登录页壁纸不存在");
+        if(settings.defaultCoverAssetId()!=null && media.lock(settings.defaultCoverAssetId())==null) throw new ApiException(400,"默认封面图片不存在");
         try {if(mapper.save(json.writeValueAsString(settings),version)!=1) throw ApiException.conflict();}
         catch(JsonProcessingException e) {throw new ApiException(400,"配置格式无效");}
         audit.record("site.update","site",0);return read();

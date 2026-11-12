@@ -19,7 +19,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest @AutoConfigureMockMvc
+@SpringBootTest(properties="app.login.captcha-always-required=false") @AutoConfigureMockMvc
 class AdminAccountsIntegrationTest extends DatabaseTestSupport {
     @Autowired AuthMapper mapper;@Autowired AdminAccountService service;@Autowired MockMvc mvc;
     @Autowired PasswordEncoder encoder;@Autowired ObjectMapper json;@Autowired JdbcTemplate jdbc;@Autowired SessionRegistry sessions;

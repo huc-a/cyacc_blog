@@ -33,17 +33,34 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     long n(Map<String,Object> row,String key) {return ((Number)row.get(key)).longValue();}
     ContentDetails details(Map<String,Object> values) {return json.convertValue(values,ContentDetails.class);}
     ContentDetails completeDetails() {
-        return details(Map.of("websiteUrl","https://example.com","sourceUrl","https://example.com/source","demoUrl","https://example.com/demo",
+        return details(Map.of("sourceUrl","https://example.com/source","demoUrl","https://example.com/demo",
             "benefitText","免费资源","requirementsMarkdown","仅供个人学习","techStack",List.of("Java","Vue"),
             "chapters",List.of(Map.of("chapterKey",UUID.randomUUID(),"slug","start","title","第一章","bodyMarkdown","章节正文"))));
     }
     ContentInput input(String type,String slug,String title,long version,ContentDetails d) {
-        return new ContentInput(type,slug,title,"摘要 "+title,"# 正文 "+title,version,null,null,List.of(),null,List.of(),d);
+        return new ContentInput(type,slug,title,"摘要 "+title,"# 正文 "+title,version,null,List.of(),null,List.of(),d);
     }
     byte[] png() throws IOException {
         var image=new java.awt.image.BufferedImage(8,8,java.awt.image.BufferedImage.TYPE_INT_RGB);var output=new ByteArrayOutputStream();ImageIO.write(image,"png",output);return output.toByteArray();
     }
     long upload() throws IOException {return n(media.upload(new MockMultipartFile("file","test.png","image/png",png())),"id");}
+
+    @Test void articleCategoriesAreReturnedFilteredAndProtectedWhileReferenced() throws Exception {
+        String slug=slug(),categorySlug="category-"+slug;
+        var category=new HashMap<String,Object>();category.put("name","Category "+slug);category.put("slug",categorySlug);category.put("sortOrder",10);
+        taxonomy.createCategory(category);long categoryId=n(category,"id");
+        var input=new ContentInput("article",slug,"Categorized article","Summary","Body",0L,null,List.of(),categoryId,null,List.of(),null);
+        var draft=contents.create(input);long contentId=n(draft,"id");
+        var saved=contents.save(contentId,input);
+        var published=contents.publish(contentId,n(saved,"lockVersion"));
+        assertThat(published.get("categoryId")).isEqualTo(categoryId);
+        assertThat(contents.list(true,"article","all","",1,10,null,null,false,categoryId).get("total")).isEqualTo(1L);
+        mvc.perform(get("/api/public/taxonomy")).andExpect(status().isOk()).andExpect(jsonPath("$.categories[?(@.id == "+categoryId+")].name").value("Category "+slug));
+        mvc.perform(get("/api/public/contents").param("type","article").param("categoryId",Long.toString(categoryId)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].categoryName").value("Category "+slug));
+        assertThat(taxonomy.categoryReferences(categoryId)).isPositive();
+        mvc.perform(delete("/api/admin/taxonomy/categories/"+categoryId).with(csrf())).andExpect(status().isConflict());
+    }
 
     @Test @org.springframework.transaction.annotation.Transactional
     void readingNeighborsUsePublicTitlesAndStableOrderWithinTheSameType() throws Exception {
@@ -85,9 +102,9 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         String slug=slug();
         var oldTag=new HashMap<String,Object>(Map.of("name","published-"+slug,"slug","published-"+slug));taxonomy.createTag(oldTag);
         var nextTag=new HashMap<String,Object>(Map.of("name","working-"+slug,"slug","working-"+slug));taxonomy.createTag(nextTag);
-        var input=new ContentInput("article",slug,slug,"摘要","正文",0L,null,null,List.of(n(oldTag,"id")),null,List.of(),null);
+        var input=new ContentInput("article",slug,slug,"摘要","正文",0L,null,List.of(n(oldTag,"id")),null,List.of(),null);
         var item=contents.create(input);long id=n(item,"id");var published=contents.publish(id,0);
-        var changed=contents.save(id,new ContentInput("article",slug,slug,"摘要","新正文",n(published,"lockVersion"),null,null,List.of(n(nextTag,"id")),null,List.of(),null));
+        var changed=contents.save(id,new ContentInput("article",slug,slug,"摘要","新正文",n(published,"lockVersion"),null,List.of(n(nextTag,"id")),null,List.of(),null));
         var visible=(List<Map<String,Object>>)contents.list(true,"article","all",slug,1,10).get("items");
         assertThat(visible).hasSize(1);
         assertThat((List<String>)visible.get(0).get("tagNames")).containsExactly(oldTag.get("name").toString());
@@ -140,7 +157,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         mvc.perform(put("/api/admin/site").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("settings",values,"lockVersion",n(original,"lockVersion"))))).andExpect(status().isBadRequest());
     }
 
-    @ParameterizedTest @ValueSource(strings={"work","tutorial","website","deal"})
+    @ParameterizedTest @ValueSource(strings={"work","tutorial","deal"})
     void everyTypePreservesItsPublishedSnapshot(String type) {
         String slug=slug();var a=contents.create(input(type,slug,"旧标题",0,completeDetails()));long id=n(a,"id");
         var p=contents.publish(id,0);var old=contents.publicDetail(slug);
@@ -163,11 +180,10 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         assertThatThrownBy(()->contents.publish(n(incomplete,"id"),0)).isInstanceOf(ApiException.class);
     }
 
-    @Test void categoryTagsCoverAndMediaStayIsolated() throws Exception {
+    @Test void tagsCoverAndMediaStayIsolated() throws Exception {
         long cover=upload();String tagName="hidden-"+slug();var tag=new HashMap<String,Object>(Map.of("name",tagName,"slug",slug()));taxonomy.createTag(tag);
-        var cat=new HashMap<String,Object>(Map.of("name","分类-"+slug(),"slug",slug(),"type","article","sortOrder",0));taxonomy.createCategory(cat);
         String slug=slug();var a=contents.create(input("article",slug,"旧标题",0,ContentDetails.defaults()));long id=n(a,"id");var p=contents.publish(id,0);
-        var next=new ContentInput("article",slug,"新标题","新摘要","![图](/api/public/media/"+cover+")",n(p,"lockVersion"),null,n(cat,"id"),List.of(n(tag,"id")),cover,List.of(),null);
+        var next=new ContentInput("article",slug,"新标题","新摘要","![图](/api/public/media/"+cover+")",n(p,"lockVersion"),null,List.of(n(tag,"id")),cover,List.of(),null);
         var changed=contents.save(id,next);
         assertThat(contents.publicDetail(slug).get("coverAssetId")).isNull();
         assertThat(contents.list(true,"","all",tagName,1,10).get("total")).isEqualTo(0L);
@@ -175,7 +191,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         assertThatThrownBy(()->media.delete(cover)).isInstanceOf(ApiException.class);
         contents.publish(id,n(changed,"lockVersion"));
         assertThat(contents.list(true,"","all",tagName,1,10).get("total")).isEqualTo(1L);
-        assertThat(contents.list(true,"article","all","",1,10,n(cat,"id"),n(tag,"id"),null).get("total")).isEqualTo(1L);
+        assertThat(contents.list(true,"article","all","",1,10,n(tag,"id"),null).get("total")).isEqualTo(1L);
         assertThat(mediaMapper.isPublic(cover)).isTrue();
         mvc.perform(get("/api/public/media/"+cover)).andExpect(status().isOk()).andExpect(content().contentType("image/png"));
         assertThatThrownBy(()->taxonomy.deleteTag(n(tag,"id"))).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
@@ -200,9 +216,9 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     }
 
     @Test void unsafeLinksDatesAndIncompletePublicationAreRejected() {
-        assertThatThrownBy(()->contents.create(input("website",slug(),"网站",0,details(Map.of("websiteUrl","javascript:alert(1)"))))).isInstanceOf(ApiException.class);
+        assertThatThrownBy(()->contents.create(input("website",slug(),"网站",0,ContentDetails.defaults()))).isInstanceOf(ApiException.class);
         assertThatThrownBy(()->contents.create(input("deal",slug(),"活动",0,details(Map.of("startsAt","2026-10-21T00:00:00Z","endsAt","2026-10-20T00:00:00Z"))))).isInstanceOf(ApiException.class);
-        for(String type:List.of("website","deal")) {var draft=contents.create(input(type,slug(),"未完整",0,ContentDetails.defaults()));assertThatThrownBy(()->contents.publish(n(draft,"id"),0)).isInstanceOf(ApiException.class);}
+        for(String type:List.of("deal")) {var draft=contents.create(input(type,slug(),"未完整",0,ContentDetails.defaults()));assertThatThrownBy(()->contents.publish(n(draft,"id"),0)).isInstanceOf(ApiException.class);}
     }
 
     @Test void dealValidityPrioritizesStartAndExpiryOverManualVerification() {
@@ -218,7 +234,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         var original=site.read();var values=json.convertValue(original.get("settings"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});values.put("homeModules",List.of("article"));
         var updated=site.save(json.convertValue(values,SiteSettings.class),n(original,"lockVersion"));
         try {
-            assertThat(contents.list(true,"","all",title,1,10,null,null,null,true).get("total")).isEqualTo(0L);
+            assertThat(contents.list(true,"","all",title,1,10,null,null,true).get("total")).isEqualTo(0L);
             assertThat(contents.list(true,"work","all",title,1,10).get("total")).isEqualTo(1L);
         } finally {site.save((SiteSettings)original.get("settings"),n(updated,"lockVersion"));}
     }

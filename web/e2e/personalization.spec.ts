@@ -8,7 +8,7 @@ test('navigation search opens left, closes accessibly, and gains opacity on scro
   const header = page.locator('.nav-shell'), trigger = page.locator('.header-search .search-trigger')
   await expect(page.getByRole('button', { name: '清晰阅读' })).toHaveCount(0)
   await expect(page.locator('.announcement, .profile-counts')).toHaveCount(0)
-  await expect(page.locator('.desktop-nav .site-icon')).toHaveCount(6)
+  await expect(page.locator('.desktop-nav .site-icon')).toHaveCount(5)
   if (site.github) await expect(page.locator('.profile-contacts').getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', site.github)
   if (site.email) await expect(page.locator('.profile-contacts').getByRole('link', { name: '邮箱' })).toHaveAttribute('href', `mailto:${site.email}`)
   expect(await page.locator('.profile-contacts').innerText()).toBe('')

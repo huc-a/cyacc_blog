@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { MediaAsset } from '~/types'
 import { useMessage } from 'naive-ui'
-const props = defineProps<{ kind: 'wallpaper' | 'avatar'; label?: string; saveHint?: string }>()
+const props = defineProps<{ kind: 'wallpaper' | 'avatar' | 'cover'; label?: string; saveHint?: string }>()
 const asset = defineModel<number | null>({ required: true })
 const message = useMessage(), api = useApi(), input = ref<HTMLInputElement | null>(null), picker = ref(false)
 const busy = defineModel<boolean>('busy', { default: false })
-const label = computed(() => props.label || (props.kind === 'avatar' ? '头像' : '壁纸'))
+const label = computed(() => props.label || (props.kind === 'avatar' ? '头像' : props.kind === 'cover' ? '封面' : '壁纸'))
 async function upload(files: FileList | null) {
   const file = files?.[0]; if (!file) return
   busy.value = true

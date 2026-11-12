@@ -15,7 +15,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest @AutoConfigureMockMvc
+@SpringBootTest(properties="app.login.captcha-always-required=false") @AutoConfigureMockMvc
 class AccountIntegrationTest extends DatabaseTestSupport {
     @Autowired AuthMapper mapper;@Autowired PasswordEncoder encoder;@Autowired MockMvc mvc;@Autowired ObjectMapper json;
     MockHttpSession login(String username,String password) throws Exception {

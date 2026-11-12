@@ -99,7 +99,7 @@ test('administrator avatar persists privately and can be selected or removed', a
   const api = page.request, initial = await (await api.get('/api/auth/me')).json()
   let assetId: number | undefined
   try {
-    await page.goto('/admin/settings')
+    await page.goto('/admin/profile')
     const filename = `admin-avatar-${Date.now()}.gif`
     const upload = page.waitForResponse(r => new URL(r.url()).pathname === '/api/admin/media' && r.request().method() === 'POST')
     await page.getByLabel('上传自定义管理员头像', { exact: true }).setInputFiles({ name: filename, mimeType: 'image/gif', buffer: gif })

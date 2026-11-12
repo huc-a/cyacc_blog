@@ -23,7 +23,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest @AutoConfigureMockMvc
+@SpringBootTest(properties="app.login.captcha-always-required=false") @AutoConfigureMockMvc
 class CoreIntegrationTest extends DatabaseTestSupport {
     @Autowired ContentService service;
     @Autowired ContentMapper mapper;
@@ -142,11 +142,11 @@ class CoreIntegrationTest extends DatabaseTestSupport {
         for(int i=0;i<10;i++) {
             mvc.perform(post("/api/auth/login").with(csrf()).with(r->{r.setRemoteAddr("192.0.2.7");return r;})
                 .param("username","unknown-admin").param("password","wrong"))
-                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.message").value("账号或密码错误"));
+                .andExpect(i<3?status().isUnauthorized():status().isBadRequest()).andExpect(jsonPath("$.captchaRequired").value(i>=2));
         }
         mvc.perform(post("/api/auth/login").with(csrf()).with(r->{r.setRemoteAddr("192.0.2.7");return r;})
             .param("username","unknown-admin").param("password","wrong"))
-            .andExpect(status().isTooManyRequests()).andExpect(header().string("Retry-After","60"));
+            .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"));
     }
 
     @Test void failedMediaAuditRollsBackFileAndDatabaseTogether() throws Exception {

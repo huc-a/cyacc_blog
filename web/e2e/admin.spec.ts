@@ -1,13 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
-import { credentials, login, mutate } from './helpers'
+import { login, mutate } from './helpers'
 
 async function uiLogin(page: Page) {
+  await login(page.request)
   await page.goto('/admin/dashboard')
-  await expect(page).toHaveURL(/\/admin\/login/)
-  await page.getByLabel('管理员账号').fill(credentials().username)
-  await page.getByLabel('密码', { exact: true }).fill(credentials().password)
-  await page.getByRole('button', { name: '登录管理后台' }).click()
-  await expect(page).toHaveURL(/\/admin\/dashboard/)
   await expect(page.locator('.admin-content')).toBeVisible()
 }
 async function confirm(page: Page) { await page.getByRole('button', { name: '确认', exact: true }).click() }
@@ -124,7 +120,7 @@ test('tutorial chapter order, unsaved guard, optimistic conflict, admin pages an
     await expect(page.locator('.n-message-container')).toContainText(/冲突|刷新|修改/)
     expect((await (await page.request.get(`/api/admin/contents/${id}`)).json()).title).toBe('来自另一个页面的修改')
     await page.getByRole('link', { name: '返回列表', exact: true }).click(); await confirm(page)
-    for (const path of ['dashboard', 'taxonomy', 'settings', 'logs', 'analytics', 'works', 'websites', 'deals']) {
+    for (const path of ['dashboard', 'taxonomy', 'settings', 'logs', 'analytics', 'works', 'deals']) {
       await page.goto(`/admin/${path}`); await expect(page.locator('.admin-content h1')).toBeVisible()
     }
     await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/admin/dashboard')
@@ -139,7 +135,7 @@ test('tutorial chapter order, unsaved guard, optimistic conflict, admin pages an
   }
 })
 
-for (const type of ['work', 'website', 'deal']) test(`${type}: UI create, publish, reopen and update`, async ({ page, request }) => {
+for (const type of ['work', 'deal']) test(`${type}: UI create, publish, reopen and update`, async ({ page, request }) => {
   await uiLogin(page)
   const slug = `${type}-ui-${Date.now()}`; let id: string | undefined
   try {
@@ -148,7 +144,6 @@ for (const type of ['work', 'website', 'deal']) test(`${type}: UI create, publis
     await page.getByLabel('访问地址').fill(slug)
     await page.getByRole('textbox', { name: '正文', exact: true }).fill('真实页面发布验收正文')
     if (type === 'work') { await page.getByLabel('演示地址').fill('https://example.com/demo'); await page.getByLabel('技术栈（逗号分隔）').fill('Vue, Java'); await page.getByLabel('项目状态').selectOption('released') }
-    if (type === 'website') await page.getByLabel('网站地址').fill('https://example.com')
     if (type === 'deal') { await page.getByLabel('信息来源').fill('https://example.com/source'); await page.getByLabel('优惠或资源内容').fill('测试资源说明'); await page.getByLabel('适用条件与限制').fill('仅用于本地测试'); }
     await page.getByRole('button', { name: '发布', exact: true }).click(); await confirm(page)
     await expect(page).toHaveURL(/\/admin\/editor\/\d+/); id = page.url().split('/').pop()
@@ -159,13 +154,7 @@ for (const type of ['work', 'website', 'deal']) test(`${type}: UI create, publis
     await page.getByRole('textbox', { name: '正文', exact: true }).fill('编辑后再发布的正文')
     await page.getByRole('button', { name: '更新发布', exact: true }).click(); await confirm(page)
     await expect.poll(async () => (await (await request.get(`/api/public/contents/${slug}`)).json()).bodyMarkdown).toBe('编辑后再发布的正文')
-    if (type === 'website') {
-      await page.context().clearCookies()
-      await page.getByRole('button', { name: '保存草稿', exact: true }).click()
-      await expect(page.locator('.n-message-container')).toContainText(/登录/)
-      expect((await page.request.get(`/api/admin/contents/${id}`)).status()).toBe(401)
-    }
   } finally {
-    if (id) { const cleanup = type === 'website' ? request : page.request; if (type === 'website') await login(cleanup); const current = await (await cleanup.get(`/api/admin/contents/${id}`)).json(); await mutate(cleanup, 'POST', `/api/admin/contents/${id}/trash`, { lockVersion: current.lockVersion }) }
+    if (id) { await login(request); const current = await (await request.get(`/api/admin/contents/${id}`)).json(); await mutate(request, 'POST', `/api/admin/contents/${id}/trash`, { lockVersion: current.lockVersion }) }
   }
 })

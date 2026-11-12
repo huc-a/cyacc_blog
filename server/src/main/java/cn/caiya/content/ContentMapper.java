@@ -10,7 +10,7 @@ public interface ContentMapper {
     @Select("SELECT * FROM content_revision WHERE id=#{id}") Map<String,Object> revision(long id);
     @Insert("INSERT INTO content(content_type,slug) VALUES(#{type},#{slug})")
     @Options(useGeneratedKeys=true,keyProperty="id") void insert(Map<String,Object> values);
-    @Insert("INSERT INTO content_revision(content_id,content_type,revision_no,title,summary,change_note) VALUES(#{contentId},#{type},#{revisionNo},#{title},#{summary},#{changeNote})")
+    @Insert("INSERT INTO content_revision(content_id,content_type,revision_no,title,summary,change_note,category_id) VALUES(#{contentId},#{type},#{revisionNo},#{title},#{summary},#{changeNote},#{categoryId})")
     @Options(useGeneratedKeys=true,keyProperty="id") void insertRevision(Map<String,Object> values);
     @Update("UPDATE content SET working_revision_id=#{revisionId} WHERE id=#{id}")
     void working(@Param("id") long id,@Param("revisionId") long revisionId);

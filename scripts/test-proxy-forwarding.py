@@ -8,6 +8,7 @@ import argparse
 import http.client
 from http.cookies import SimpleCookie
 import json
+import uuid
 from urllib.parse import urlencode, urlsplit
 
 
@@ -37,7 +38,7 @@ class Client:
         return self.call('POST','/api/auth/login', {
             self.csrf['headerName']:self.csrf['token'],
             'Content-Type':'application/x-www-form-urlencoded', **(headers or {})
-        }, urlencode({'username':'missing-proxy-test-user','password':'invalid-test-password'}))[0]
+        }, urlencode({'username':'proxy-'+uuid.uuid4().hex,'password':'invalid-test-password'}))[0]
 
 
 def main():
@@ -49,7 +50,7 @@ def main():
     if not args.api_only and not args.proxy:
         parser.error('--proxy is required unless --api-only is selected')
     first = Client(args.api, forwarded={'X-Forwarded-For':'198.51.100.21'})
-    for _ in range(10): assert first.login() == 401
+    for i in range(10): assert first.login() == (401 if i < 3 else 400)
     assert first.login() == 429
     second = Client(args.api, forwarded={'X-Forwarded-For':'198.51.100.22'})
     assert second.login() == 401, 'Backend combined different forwarded client addresses'
@@ -61,7 +62,7 @@ def main():
     for i in range(10):
         assert public.login({'X-Forwarded-For':f'203.0.113.{i+1}',
             'Forwarded':f'for=192.0.2.{i+1};proto=https;host=untrusted.example',
-            'X-Forwarded-Host':'untrusted.example','X-Forwarded-Prefix':'/untrusted'}) == 401
+            'X-Forwarded-Host':'untrusted.example','X-Forwarded-Prefix':'/untrusted'}) == (401 if i < 3 else 400)
     assert public.login({'X-Forwarded-For':'203.0.113.99','Forwarded':'for=192.0.2.99'}) == 429
     other = Client(args.proxy, source='127.0.0.2')
     assert other.login() == 401, 'Proxy combined different source addresses'

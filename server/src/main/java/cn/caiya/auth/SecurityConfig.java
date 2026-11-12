@@ -1,8 +1,6 @@
 package cn.caiya.auth;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.*;
-import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -37,39 +34,35 @@ public class SecurityConfig {
             }
         };
     }
-    @Bean SecurityFilterChain security(HttpSecurity http,AuthMapper mapper,org.springframework.security.core.session.SessionRegistry registry) throws Exception {
+    @Bean SecurityFilterChain security(HttpSecurity http,AuthMapper mapper,org.springframework.security.core.session.SessionRegistry registry,
+            LoginProtection protection,CaptchaService captcha,com.fasterxml.jackson.databind.ObjectMapper json,
+            @Value("${app.login.captcha-always-required:true}") boolean captchaAlwaysRequired) throws Exception {
         var csrf=new HttpSessionCsrfTokenRepository();
         csrf.setHeaderName("X-CSRF-TOKEN");
         http.csrf(c->c.csrfTokenRepository(csrf))
-            .authorizeHttpRequests(a->a.requestMatchers("/api/public/**","/api/auth/csrf","/api/auth/login","/error").permitAll().anyRequest().hasRole("ADMIN"))
+            .authorizeHttpRequests(a->a.requestMatchers("/api/public/**","/api/auth/csrf","/api/auth/captcha","/api/auth/login","/error").permitAll().anyRequest().hasRole("ADMIN"))
             .requestCache(c->c.disable())
             .sessionManagement(s->s.maximumSessions(5).sessionRegistry(registry).expiredSessionStrategy(e->jsonError(e.getResponse(),401,"会话已失效，请重新登录")))
             .formLogin(f->f.loginProcessingUrl("/api/auth/login")
-                .successHandler((req,res,auth)->{mapper.login(auth.getName());res.setContentType("application/json;charset=UTF-8");res.getWriter().write("{\"authenticated\":true}");})
-                .failureHandler((req,res,e)->jsonError(res,401,"账号或密码错误")))
+                .successHandler((req,res,auth)->{
+                    protection.succeeded(auth.getName());captcha.clear(req.getSession(false));mapper.login(auth.getName());
+                    res.setContentType("application/json;charset=UTF-8");res.setHeader("Cache-Control","no-store");res.getWriter().write("{\"authenticated\":true}");
+                })
+                .failureHandler((req,res,e)->{
+                    String username=LoginProtectionFilter.username(req);protection.failed(username,req.getRemoteAddr());
+                    var state=protection.account(username);int retry=protection.retryAfter(state);
+                    LoginProtectionFilter.error(json,res,retry>0?429:401,retry>0?"登录尝试过于频繁，请稍后再试":"账号或密码错误",
+                        protection.captchaRequired(state,req.getRemoteAddr()),retry);
+                }))
             .logout(l->l.logoutUrl("/api/auth/logout").logoutSuccessHandler((req,res,auth)->res.setStatus(204)))
             .exceptionHandling(e->e.authenticationEntryPoint((req,res,x)->jsonError(res,401,"请先登录"))
                 .accessDeniedHandler((req,res,x)->jsonError(res,403,"权限不足或安全令牌已失效，请刷新页面")))
             .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'none'; frame-ancestors 'none'")))
-            .addFilterBefore(new LoginRateLimit(),UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new LoginProtectionFilter(protection,captcha,json,captchaAlwaysRequired),UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new ActiveAccountFilter(mapper),org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         return http.build();
     }
     static void jsonError(HttpServletResponse res,int status,String message) throws IOException {
         res.setStatus(status);res.setContentType("application/json;charset=UTF-8");res.getWriter().write("{\"message\":\""+message+"\"}");
-    }
-    static class LoginRateLimit extends OncePerRequestFilter {
-        record Window(long start,int count) {}
-        private final ConcurrentHashMap<String,Window> attempts=new ConcurrentHashMap<>();
-        protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws ServletException,IOException {
-            if(req.getMethod().equals("POST") && req.getRequestURI().equals(req.getContextPath()+"/api/auth/login")) {
-                long now=System.currentTimeMillis();
-                if(attempts.size()>10000) attempts.entrySet().removeIf(e->now-e.getValue().start>60000);
-                if(attempts.size()>=10000 && !attempts.containsKey(req.getRemoteAddr())) {jsonError(res,429,"登录尝试过于频繁，请稍后再试");return;}
-                var w=attempts.compute(req.getRemoteAddr(),(k,v)->v==null||now-v.start>60000?new Window(now,1):new Window(v.start,v.count+1));
-                if(w.count>10) {res.setHeader("Retry-After","60");jsonError(res,429,"登录尝试过于频繁，请稍后再试");return;}
-            }
-            chain.doFilter(req,res);
-        }
     }
 }

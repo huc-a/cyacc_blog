@@ -64,7 +64,7 @@ jobs:
           pnpm exec playwright install --with-deps chrome
       - name: Real browser workflows
         run: |
-          java -jar server/target/caiya-server-*.jar > .local/server.log 2>&1 &
+          LOGIN_CAPTCHA_ALWAYS_REQUIRED=false java -jar server/target/caiya-server-*.jar > .local/server.log 2>&1 &
           echo $! > .local/server.pid
           node web/.output/server/index.mjs > .local/web.log 2>&1 &
           echo $! > .local/web.pid

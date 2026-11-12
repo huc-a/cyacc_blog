@@ -1,10 +1,11 @@
-export type ContentType = 'article' | 'work' | 'tutorial' | 'website' | 'deal'
+export type ContentType = 'article' | 'work' | 'tutorial' | 'deal'
 export interface Taxon { id: number; name: string; slug: string; contentType?: ContentType; count?: number; sortOrder?: number }
+export interface Category { id: number; name: string; slug: string; count?: number; sortOrder: number }
 export interface Chapter { chapterKey: string; slug: string; title: string; bodyMarkdown: string }
 export interface Details {
   demoUrl?: string; sourceUrl?: string; projectStatus?: string; techStack?: string[];
   difficulty?: string; prerequisitesMarkdown?: string; chapters?: Chapter[];
-  websiteUrl?: string; iconAssetId?: number | null; claimUrl?: string; benefitText?: string;
+  claimUrl?: string; benefitText?: string;
   requirementsMarkdown?: string; startsAt?: string | null; endsAt?: string | null;
   validity?: string; verification?: { result: string; verifiedAt: string; evidenceUrl: string; note: string } | null;
 }
@@ -13,9 +14,8 @@ export interface Content {
   publishStatus: 'draft' | 'published' | 'offline'; revisionId: number; revisionNo: number;
   revisionState?: 'editing' | 'frozen'; lockVersion?: number; createdAt?: string; updatedAt?: string;
   firstPublishedAt?: string; lastPublishedAt?: string; deletedAt?: string;
-  categoryId?: number | null; categoryName?: string; category?: Taxon | null;
   coverAssetId?: number | null; bodyMarkdown?: string; details?: Details;
-  tags?: Taxon[]; tagNames?: string[]; tagIds?: number[]; galleryAssetIds?: number[];
+  tags?: Taxon[]; tagNames?: string[]; tagIds?: number[]; galleryAssetIds?: number[]; categoryId?: number | null; categoryName?: string | null;
   navigation?: { previous: ContentNeighbor | null; next: ContentNeighbor | null };
 }
 export type ContentNeighbor = Pick<Content, 'id' | 'contentType' | 'slug' | 'title'>
@@ -26,7 +26,7 @@ export interface SiteSettings {
   backgroundAssetId: number | null; glassOpacity: number; articleOpacity: number; blur: number;
   fontSize: number; lineHeight: number; homeModules: ContentType[];
   avatarAssetId: number | null; icpNumber: string; navTopOpacity: number; navScrolledOpacity: number;
-  policeNumber: string; loginBackgroundAssetId: number | null;
+  policeNumber: string; loginBackgroundAssetId: number | null; defaultCoverAssetId: number | null;
 }
 export interface MediaAsset { id: number; originalName: string; mimeType: string; width: number; height: number; sizeBytes: number; createdAt: string }
 export interface Account { username: string; displayName: string; avatarAssetId: number | null; lockVersion: number }

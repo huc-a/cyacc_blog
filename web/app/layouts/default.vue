@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defaultSite, themeStyle, sections } from '~/utils/site'
+const article = sections.find(section => section.type === 'article')!
 const { data, error } = await useSite()
 const site = computed(() => data.value || defaultSite)
 const menu = ref(false)
@@ -18,9 +19,9 @@ useSeoMeta({ titleTemplate: title => title ? `${title} · ${site.value.name}` : 
     <a class="skip-link" href="#main">跳到正文</a>
     <header class="nav-shell glass" :class="{ scrolled, searching, 'menu-open': menu }">
       <NuxtLink to="/" class="brand" aria-label="返回首页"><span class="brand-mark">菜</span><span>{{ site.name }}<small>NOTES, CODE & EVERYDAY LIFE</small></span></NuxtLink>
-      <nav class="desktop-nav" aria-label="主导航"><NuxtLink to="/"><SiteIcon name="home" />首页</NuxtLink><NuxtLink v-for="section in sections" :key="section.type" :to="`/${section.path}`"><SiteIcon :name="section.type" />{{ section.label }}</NuxtLink></nav>
+      <nav class="desktop-nav" aria-label="主导航"><NuxtLink to="/"><SiteIcon name="home" />首页</NuxtLink><NuxtLink :to="`/${article.path}`"><SiteIcon name="article" />{{ article.label }}</NuxtLink></nav>
       <div class="nav-tools"><HeaderSearch v-model:open="searching" /><button class="mobile-menu" :aria-expanded="menu" aria-label="打开导航" @click="menu = !menu; searching = false">☰</button></div>
-      <nav v-if="menu" class="mobile-nav" aria-label="移动导航"><NuxtLink to="/"><SiteIcon name="home" />首页</NuxtLink><NuxtLink v-for="section in sections" :key="section.type" :to="`/${section.path}`"><SiteIcon :name="section.type" />{{ section.label }}</NuxtLink><NuxtLink to="/about">关于</NuxtLink></nav>
+      <nav v-if="menu" class="mobile-nav" aria-label="移动导航"><NuxtLink to="/"><SiteIcon name="home" />首页</NuxtLink><NuxtLink :to="`/${article.path}`"><SiteIcon name="article" />{{ article.label }}</NuxtLink></nav>
     </header>
     <div v-if="error" class="connection-error wrap" role="alert">站点服务暂时不可用，请稍后刷新。</div>
     <main id="main"><slot /></main>

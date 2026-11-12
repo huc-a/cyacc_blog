@@ -14,15 +14,18 @@ public class ContentService {
     private final DetailService details;
     public ContentService(ContentMapper mapper,AuditService audit,DetailService details) {this.mapper=mapper;this.audit=audit;this.details=details;}
     public static void type(String type) {
-        if(!Set.of("article","work","tutorial","website","deal").contains(type)) throw new ApiException(400,"内容类型无效");
+        if(!Set.of("article","work","tutorial","deal").contains(type)) throw new ApiException(400,"内容类型无效");
     }
     public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size) {
-        return list(publicOnly,type,status,q,page,size,null,null,null);
+        return list(publicOnly,type,status,q,page,size,null,null,false);
     }
-    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long categoryId,Long tagId,java.time.LocalDate date) {
-        return list(publicOnly,type,status,q,page,size,categoryId,tagId,date,false);
+    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long tagId,java.time.LocalDate date) {
+        return list(publicOnly,type,status,q,page,size,tagId,date,false);
     }
-    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long categoryId,Long tagId,java.time.LocalDate date,boolean home) {
+    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long tagId,java.time.LocalDate date,boolean home) {
+        return list(publicOnly,type,status,q,page,size,tagId,date,home,null);
+    }
+    public Map<String,Object> list(boolean publicOnly,String type,String status,String q,int page,int size,Long tagId,java.time.LocalDate date,boolean home,Long categoryId) {
         if(!type.isEmpty()) type(type);
         if(!Set.of("all","draft","published","offline","trash").contains(status) || q.length()>200 || page<1 || page>100000 || size<1 || size>50)
             throw new ApiException(400,"筛选或分页参数无效");
@@ -30,7 +33,7 @@ public class ContentService {
         query.put("publicOnly",publicOnly);query.put("type",type);query.put("status",status);query.put("q",q);
         query.put("search","%"+q.replace("!","!!").replace("%","!%").replace("_","!_")+"%");
         query.put("size",size);query.put("offset",(page-1)*size);
-        query.put("categoryId",categoryId);query.put("tagId",tagId);query.put("date",date);
+        query.put("tagId",tagId);query.put("date",date);query.put("categoryId",categoryId);
         query.put("home",home);
         var rows=mapper.list(query).stream().map(Views::camel).toList();
         if(publicOnly) rows.forEach(this::removePrivateFields);
@@ -57,8 +60,7 @@ public class ContentService {
         var out=Views.camel(c);out.remove("workingRevisionId");out.remove("publishedRevisionId");
         out.put("revisionId",rid);out.put("revisionNo",r.get("revision_no"));out.put("revisionState",r.get("revision_state"));
         out.put("title",r.get("title"));out.put("summary",r.get("summary"));
-        out.put("categoryId",r.get("category_id"));out.put("coverAssetId",r.get("cover_asset_id"));
-        out.put("category",r.get("category_id")==null?null:details.category(number(r,"category_id")));
+        out.put("coverAssetId",r.get("cover_asset_id"));out.put("categoryId",r.get("category_id"));
         out.putAll(details.read(rid,c.get("content_type").toString()));
         if(publicOnly) removePrivateFields(out);
         return out;
@@ -77,7 +79,7 @@ public class ContentService {
         long rid=number(r,"id");details.save(rid,input);return rid;
     }
     private Map<String,Object> revisionValues(ContentInput input) {
-        var r=new HashMap<String,Object>();r.put("title",input.title().trim());r.put("summary",input.summary());r.put("changeNote",input.changeNote());return r;
+        var r=new HashMap<String,Object>();r.put("title",input.title().trim());r.put("summary",input.summary());r.put("changeNote",input.changeNote());r.put("categoryId",input.categoryId());return r;
     }
     private Map<String,Object> locked(long id,long version,boolean allowTrash) {
         var c=mapper.lock(id);if(c==null) throw new ApiException(404,"内容不存在");

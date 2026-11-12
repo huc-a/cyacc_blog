@@ -13,7 +13,8 @@ public class DetailService {
     public DetailService(DetailMapper mapper) {this.mapper=mapper;}
     public void validate(ContentInput input) {
         var d=input.details();
-        for(var url:List.of(d.demoUrl(),d.sourceUrl(),d.websiteUrl(),d.claimUrl())) SafeUrls.check(url);
+        if(input.categoryId()!=null && !mapper.categoryExists(input.categoryId())) throw new ApiException(400,"内容分类不存在");
+        for(var url:List.of(d.demoUrl(),d.sourceUrl(),d.claimUrl())) SafeUrls.check(url);
         if(d.startsAt()!=null && d.endsAt()!=null && !d.endsAt().isAfter(d.startsAt())) throw new ApiException(400,"截止时间必须晚于开始时间");
         var keys=new HashSet<UUID>();var slugs=new HashSet<String>();
         for(var c:d.chapters()) if(!keys.add(c.chapterKey())||!slugs.add(c.slug())) throw new ApiException(400,"章节地址和标识不能重复");
@@ -39,10 +40,10 @@ public class DetailService {
     public Map<String,Object> read(long rid,String type) {
         var raw=mapper.read(rid,type);if(raw==null) throw new ApiException(409,"内容详情缺失");
         var d=Views.camel(raw);d.remove("revisionId");d.remove("contentType");
-        Object body=d.remove(type.equals("tutorial")?"introMarkdown":type.equals("website")?"descriptionMarkdown":"bodyMarkdown");
+        Object body=d.remove(type.equals("tutorial")?"introMarkdown":"bodyMarkdown");
         if(type.equals("tutorial")) d.put("chapters",mapper.chapters(rid).stream().map(Views::camel).toList());
         if(type.equals("deal")) {var verification=mapper.verification(rid);d.put("verification",verification==null?null:Views.camel(verification));d.put("validity",validity(d));}
-        return Map.of("bodyMarkdown",body==null?"":body,"details",d,"tags",mapper.tags(rid),"tagIds",mapper.tags(rid).stream().map(t->t.get("id")).toList(),"galleryAssetIds",mapper.gallery(rid));
+        var result=new HashMap<String,Object>();result.put("bodyMarkdown",body==null?"":body);result.put("details",d);result.put("tags",mapper.tags(rid));result.put("tagIds",mapper.tags(rid).stream().map(t->t.get("id")).toList());result.put("galleryAssetIds",mapper.gallery(rid));result.put("categoryId",mapper.categoryId(rid));return result;
     }
     public String validity(Map<String,Object> d) {
         var now=Instant.now();
@@ -55,7 +56,6 @@ public class DetailService {
         var result=read(rid,type);
         if(title.isBlank() || result.get("bodyMarkdown").toString().isBlank()) throw new ApiException(400,"发布前请填写标题和正文");
         @SuppressWarnings("unchecked") var d=(Map<String,Object>)result.get("details");
-        if(type.equals("website") && d.get("websiteUrl").toString().isBlank()) throw new ApiException(400,"请填写网站地址");
         if(type.equals("deal") && (d.get("sourceUrl").toString().isBlank() || d.get("benefitText").toString().isBlank() || d.get("requirementsMarkdown").toString().isBlank()))
             throw new ApiException(400,"请填写活动来源、优惠内容和适用条件");
         if(type.equals("tutorial")) {
@@ -63,5 +63,4 @@ public class DetailService {
             if(chapters.isEmpty() || chapters.stream().anyMatch(c->c.get("title").toString().isBlank()||c.get("body_markdown").toString().isBlank())) throw new ApiException(400,"教程至少需要一章，且每章标题和正文完整");
         }
     }
-    public Map<String,Object> category(long id) {return mapper.category(id);}
 }

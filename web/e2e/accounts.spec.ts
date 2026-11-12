@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { credentials, login, mutate } from './helpers'
+import { login, mutate } from './helpers'
 
 test('accounts: create, equal permissions, reset password, suspend, re-enable and mobile layout', async ({ page, request, playwright, baseURL }) => {
   const username = `e2e-account-${Date.now()}`, initial = `Initial-${Date.now()}-secret`, next = `Updated-${Date.now()}-secret`
@@ -10,11 +10,8 @@ test('accounts: create, equal permissions, reset password, suspend, re-enable an
     return peer.post('/api/auth/login', { form: { username, password }, headers: { [csrf.headerName]: csrf.token } })
   }
   await login(request)
-  await page.goto('/admin/login')
-  await page.getByLabel('管理员账号').fill(credentials().username)
-  await page.getByLabel('密码', { exact: true }).fill(credentials().password)
-  await page.getByRole('button', { name: '登录管理后台' }).click()
-  await expect(page).toHaveURL(/\/admin\/dashboard/)
+  await login(page.request)
+  await page.goto('/admin/dashboard')
   await page.getByRole('link', { name: '账号管理', exact: false }).click()
   const row = page.getByRole('row').filter({ hasText: username })
   try {

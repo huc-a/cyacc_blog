@@ -6,7 +6,6 @@
     <choose>
       <when test="type == 'work'">work_detail</when>
       <when test="type == 'tutorial'">tutorial_detail</when>
-      <when test="type == 'website'">website_detail</when>
       <when test="type == 'deal'">deal_detail</when>
       <otherwise>article_detail</otherwise>
     </choose>
@@ -24,11 +23,6 @@
         INSERT INTO tutorial_detail(revision_id,intro_markdown,difficulty,prerequisites_markdown)
         VALUES(#{id},#{input.bodyMarkdown},#{input.details.difficulty},#{input.details.prerequisitesMarkdown})
         ON CONFLICT(revision_id) DO UPDATE SET intro_markdown=EXCLUDED.intro_markdown,difficulty=EXCLUDED.difficulty,prerequisites_markdown=EXCLUDED.prerequisites_markdown
-      </when>
-      <when test="input.type == 'website'">
-        INSERT INTO website_detail(revision_id,website_url,description_markdown,icon_asset_id)
-        VALUES(#{id},#{input.details.websiteUrl},#{input.bodyMarkdown},#{input.details.iconAssetId})
-        ON CONFLICT(revision_id) DO UPDATE SET website_url=EXCLUDED.website_url,description_markdown=EXCLUDED.description_markdown,icon_asset_id=EXCLUDED.icon_asset_id
       </when>
       <when test="input.type == 'deal'">
         INSERT INTO deal_detail(revision_id,body_markdown,source_url,claim_url,benefit_text,requirements_markdown,starts_at,ends_at)

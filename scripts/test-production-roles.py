@@ -32,6 +32,8 @@ subprocess.run(['java', '-jar', jar, '--migrate-only'], check=True,
 assert sql("SELECT count(*) FROM flyway_schema_history WHERE success", runtime, password_r) == str(len(list(Path('server/src/main/resources/db/migration').glob('V*__*.sql'))))
 sql("INSERT INTO site_setting(setting_key,value_jsonb) VALUES ('role.probe','{}'); UPDATE site_setting SET value_jsonb='1' WHERE setting_key='role.probe'; DELETE FROM site_setting WHERE setting_key='role.probe';", runtime, password_r)
 sql("INSERT INTO content(content_type,slug) VALUES ('article','role-probe'); DELETE FROM content WHERE slug='role-probe';", runtime, password_r)
+sql("INSERT INTO login_throttle(account_key,failure_count,window_started_at) VALUES (repeat('a',64),1,now()); UPDATE login_throttle SET failure_count=2 WHERE account_key=repeat('a',64); DELETE FROM login_throttle WHERE account_key=repeat('a',64);", runtime, password_r)
+sql("INSERT INTO admin_user(username,password_hash) VALUES ('role-probe','unused-test-hash'); UPDATE admin_user SET security_version=security_version+1 WHERE username='role-probe'; DELETE FROM admin_user WHERE username='role-probe';", runtime, password_r)
 sql('CREATE TABLE forbidden_ddl(id int);', runtime, password_r, expected=False)
 sql('ALTER TABLE content ADD COLUMN forbidden_column int;', runtime, password_r, expected=False)
 assert sql(f"SELECT rolsuper OR rolcreaterole OR rolcreatedb FROM pg_roles WHERE rolname='{runtime}'") == 'f'

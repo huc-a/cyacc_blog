@@ -7,12 +7,13 @@ import org.apache.ibatis.annotations.*;
 public interface DetailMapper {
     Map<String,Object> read(@Param("id") long id,@Param("type") String type);
     void save(@Param("id") long id,@Param("input") ContentInput input);
-    @Update("UPDATE content_revision SET category_id=#{input.categoryId},cover_asset_id=#{input.coverAssetId} WHERE id=#{id} AND revision_state='editing'")
+    @Update("UPDATE content_revision SET cover_asset_id=#{input.coverAssetId},category_id=#{input.categoryId} WHERE id=#{id} AND revision_state='editing'")
     void metadata(@Param("id") long id,@Param("input") ContentInput input);
     @Delete("DELETE FROM revision_tag WHERE revision_id=#{id}") void clearTags(long id);
     @Insert("INSERT INTO revision_tag(revision_id,tag_id) VALUES(#{id},#{tagId})") void tag(@Param("id") long id,@Param("tagId") long tagId);
     @Select("SELECT t.id,t.name,t.slug FROM tag t JOIN revision_tag rt ON t.id=rt.tag_id WHERE rt.revision_id=#{id} ORDER BY t.name") List<Map<String,Object>> tags(long id);
-    @Select("SELECT id,name,slug FROM category WHERE id=#{id}") Map<String,Object> category(long id);
+    @Select("SELECT category_id FROM content_revision WHERE id=#{id}") Long categoryId(long id);
+    @Select("SELECT EXISTS(SELECT 1 FROM category WHERE id=#{id})") boolean categoryExists(long id);
     @Select("SELECT chapter_key,slug,title,body_markdown FROM tutorial_chapter WHERE tutorial_revision_id=#{id} ORDER BY sort_order,id") List<Map<String,Object>> chapters(long id);
     @Delete("DELETE FROM tutorial_chapter WHERE tutorial_revision_id=#{id}") void clearChapters(long id);
     @Insert("INSERT INTO tutorial_chapter(tutorial_revision_id,chapter_key,slug,title,body_markdown,sort_order) VALUES(#{id},#{chapter.chapterKey},#{chapter.slug},#{chapter.title},#{chapter.bodyMarkdown},#{sort})")
