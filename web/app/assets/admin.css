@@ -88,3 +88,20 @@
 .import-result{margin-top:16px;font-size:12px;line-height:2}
 .import-result .fail{color:#a66b65}
 @media(max-width:760px){.admin-sidebar{background:#22281ff7}.profile-hero{flex-direction:column;text-align:center}}
+
+/* ===== 结构性按钮修复：全局按钮样式不得污染页签/行内/图标按钮 ===== */
+.admin-shell .admin-tabs>button{flex:none;width:auto;white-space:nowrap;background:none;border:0;border-radius:0;padding:19px 0;font-size:12px;color:#8b9684;box-shadow:none}
+.admin-shell .admin-tabs>button.active{color:#476335;box-shadow:inset 0 -2px #54703f}
+.admin-shell .editor-tabs button{flex:none;width:auto;white-space:nowrap;background:none;border:0;border-radius:0;padding:12px 0;box-shadow:none}
+.admin-shell .editor-tabs button.active{color:#476335;box-shadow:inset 0 -2px #54703f}
+.admin-shell .tag-manage-row button{flex:none;width:auto;white-space:nowrap;background:none;border:0;padding:4px 2px;font-size:11px;box-shadow:none}
+.admin-shell .row-actions button{flex:none;width:auto;white-space:nowrap;background:none;border:0;padding:3px 0;box-shadow:none}
+.admin-shell .sidebar-account button{flex:none;width:auto;background:none;border:0;padding:3px 4px;color:#aeb9a6;box-shadow:none}
+.admin-shell .segmented button{background:none;border:0;box-shadow:none}
+.admin-shell .segmented button.active{background:#fff;color:#476335;box-shadow:0 2px 7px rgba(60,74,44,.12)}
+.admin-shell .editor-view-actions button{background:transparent;border-color:transparent;box-shadow:none}
+.admin-shell .media-image{background:none;border:0;padding:0;box-shadow:none}
+.admin-shell .scene-options button{padding:0;background:#f4f6ef;border:1px solid #e2e6d8;box-shadow:none}
+.tag-manage-row{padding:15px 8px;border-radius:10px}
+.tag-manage-row:hover{background:#f7f9f2}
+.tag-manage-row .tag{font-size:12px}

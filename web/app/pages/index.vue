@@ -18,7 +18,7 @@ useSeoMeta({ title: '首页' })
 </script>
 <template>
   <div class="wrap">
-    <section class="hero"><div><span class="eyebrow">NOTES, CODE & EVERYDAY LIFE</span><h1>{{ site.headline }}</h1><p>{{ site.subtitle }}</p><div class="hero-caption"><span class="tiny-dot" /> 在代码与生活之间，给想法留一个位置。</div></div></section>
+    
     <HomeCarousel v-if="showCarousel" :items="latest?.items || []" :site="site" />
     <div class="home-grid">
       <aside class="sidebar-stack left-sidebar"><ProfileCard :site="site" />

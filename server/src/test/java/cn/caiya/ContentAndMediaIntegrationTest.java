@@ -610,6 +610,19 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
   @Test
   void markdownImportCreatesDraftArticleWithFrontMatter() throws Exception {
     String md = "---\ntitle: 导入的文章\ntags: [生活, 导入测试]\n---\n# 导入的文章\n\n这是导入的正文第一段。\n";
+    var category =
+        json.readValue(
+            mvc.perform(
+                    post("/api/admin/taxonomy/categories")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(Map.of("name", "导入分类" + slug()))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            Map.class);
+    long categoryId = ((Number) category.get("id")).longValue();
     var result =
         json.readValue(
             mvc.perform(
@@ -620,6 +633,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
                                 "imported.md",
                                 "text/markdown",
                                 md.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .param("categoryId", String.valueOf(categoryId))
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -634,6 +648,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     assertThat((String) item.get("slug")).matches("[0-9]+");
     var stored = contents.detail(((Number) item.get("id")).longValue(), false);
     assertThat(stored.get("publishStatus")).isEqualTo("draft");
+    assertThat(((Number) stored.get("categoryId")).longValue()).isEqualTo(categoryId);
     assertThat((String) stored.get("bodyMarkdown")).contains("这是导入的正文第一段");
   }
 

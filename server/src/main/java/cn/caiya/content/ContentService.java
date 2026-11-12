@@ -203,7 +203,8 @@ public class ContentService {
    * names are created.
    */
   @Transactional
-  public Map<String, Object> importMarkdown(String filename, byte[] bytes) {
+  public Map<String, Object> importMarkdown(
+      String filename, byte[] bytes, Long categoryId, List<Long> extraTagIds) {
     if (bytes.length > 1024 * 1024) throw new ApiException(400, "文件超过 1 MB");
     String text =
         new String(bytes, java.nio.charset.StandardCharsets.UTF_8).replaceFirst("^\uFEFF", "");
@@ -250,8 +251,11 @@ public class ContentService {
         break;
       }
     }
-    var tagIds = new ArrayList<Long>();
-    for (String name : tagNames) tagIds.add(ensureTag(name));
+    var tagIds = new ArrayList<Long>(extraTagIds);
+    for (String name : tagNames) {
+      long id = ensureTag(name);
+      if (!tagIds.contains(id)) tagIds.add(id);
+    }
     var input =
         new ContentInput(
             "article",
@@ -262,7 +266,7 @@ public class ContentService {
             0L,
             "Markdown 导入",
             tagIds,
-            null,
+            categoryId,
             null,
             List.of(),
             ContentDetails.defaults());

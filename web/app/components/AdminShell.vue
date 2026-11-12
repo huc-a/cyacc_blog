@@ -9,7 +9,7 @@ const current = computed(() => {
   if (route.path.includes('/editor/')) return '内容编辑'
   const names: Record<string, string> = {
     dashboard: '工作台', analytics: '数据统计', articles: '文章管理', taxonomy: '分类与标签',
-    media: '媒体库', 'site-info': '网站信息', appearance: '外观', settings: '系统设置',
+    media: '媒体库', 'site-info': '网站信息', settings: '系统设置',
     profile: '管理员资料', accounts: '账号管理', logs: '操作日志'
   }
   const key = route.path.split('/')[2] || 'dashboard'
@@ -32,11 +32,13 @@ async function signOut() { try { await logout() } catch (e) { message.error(erro
         <NuxtLink to="/admin/analytics"><span>▥</span>数据统计</NuxtLink>
         <div class="nav-group">内容</div>
         <NuxtLink to="/admin/articles"><span>▤</span>文章管理</NuxtLink>
+        <NuxtLink to="/admin/works"><span>▣</span>作品管理</NuxtLink>
+        <NuxtLink to="/admin/tutorials"><span>▦</span>教程管理</NuxtLink>
+        <NuxtLink to="/admin/deals"><span>✦</span>羊毛管理</NuxtLink>
         <NuxtLink to="/admin/taxonomy"><span>⌗</span>分类与标签</NuxtLink>
         <div class="nav-group">站点</div>
         <NuxtLink to="/admin/media"><span>◫</span>媒体库</NuxtLink>
         <NuxtLink to="/admin/site-info"><span>◎</span>网站信息</NuxtLink>
-        <NuxtLink to="/admin/appearance"><span>◌</span>外观</NuxtLink>
         <NuxtLink to="/admin/settings"><span>⚙</span>系统设置</NuxtLink>
         <div class="nav-group">系统</div>
         <NuxtLink to="/admin/profile"><SiteIcon name="profile" />管理员资料</NuxtLink>

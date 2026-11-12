@@ -69,7 +69,17 @@ public class ContentController {
    */
   @PostMapping("/api/admin/contents/import")
   public Map<String, Object> importMarkdown(
-      @RequestParam("files") List<org.springframework.web.multipart.MultipartFile> files) {
+      @RequestParam("files") List<org.springframework.web.multipart.MultipartFile> files,
+      @RequestParam(required = false) Long categoryId,
+      @RequestParam(required = false) String tagIds) {
+    var extraTagIds =
+        tagIds == null || tagIds.isBlank()
+            ? List.<Long>of()
+            : java.util.Arrays.stream(tagIds.split(","))
+                .map(String::trim)
+                .filter(x -> !x.isEmpty())
+                .map(Long::valueOf)
+                .toList();
     if (files.isEmpty() || files.size() > 20) throw new ApiException(400, "一次导入 1–20 个文件");
     var items = new ArrayList<Map<String, Object>>();
     var failed = new ArrayList<Map<String, Object>>();
@@ -78,7 +88,7 @@ public class ContentController {
       try {
         if (!name.toLowerCase().matches(".*\\.(md|markdown)$"))
           throw new ApiException(400, "只支持 .md 文件");
-        var created = service.importMarkdown(name, file.getBytes());
+        var created = service.importMarkdown(name, file.getBytes(), categoryId, extraTagIds);
         items.add(
             Map.of(
                 "id", created.get("id"),
