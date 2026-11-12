@@ -16,7 +16,7 @@ export const defaultSite: SiteSettings = {
   policeNumber: '', loginBackgroundAssetId: null, defaultCoverAssetId: null
 }
 export const themeStyle = (site: SiteSettings, adminPreview = false) => ({
-  '--scene': `url("${site.backgroundAssetId ? `/api/${adminPreview ? 'admin' : 'public'}/media/${site.backgroundAssetId}${adminPreview ? '/file' : ''}` : `/backgrounds/${site.background}.svg`}")`,
+  '--scene': site.backgroundAssetId ? `url("/api/${adminPreview ? 'admin' : 'public'}/media/${site.backgroundAssetId}${adminPreview ? '/file' : ''}")` : 'none',
   '--glass': site.glassOpacity, '--paper': site.articleOpacity, '--blur': `${site.blur}px`, '--reading-size': `${site.fontSize}px`, '--reading-line': site.lineHeight
   , '--nav-top-opacity': site.navTopOpacity ?? 0, '--nav-scrolled-opacity': site.navScrolledOpacity ?? .92
 })

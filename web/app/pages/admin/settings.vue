@@ -45,13 +45,9 @@ async function exportContents() {
     <div style="max-width:880px">
       <section class="studio-panel">
         <h2>背景</h2>
-        <div class="scene-options">
-          <button v-for="scene in [{ id: 'mist', name: '雾山' }, { id: 'blue', name: '青岚' }, { id: 'dusk', name: '暮色' }]" :key="scene.id" :class="{ active: settings.background === scene.id && !settings.backgroundAssetId }" @click="settings.background = scene.id as SiteSettings['background']; settings.backgroundAssetId = null">
-            <img :src="`/backgrounds/${scene.id}.svg`" :alt="scene.name"><span>{{ scene.name }}</span>
-          </button>
-        </div>
+        
         <SiteImageControl v-model="settings.backgroundAssetId" kind="wallpaper" label="自定义背景图" save-hint="保存设置后生效" />
-        <p class="admin-footnote">全站背景二选一：色调预设或自定义图片，自定义图优先；移除图片即恢复预设。</p>
+        <p class="admin-footnote">全站背景只用自定义图片；不设置时使用默认素色底。</p>
         <div class="settings-divider" />
         <h2>登录页壁纸</h2>
         <SiteImageControl v-model="settings.loginBackgroundAssetId" v-model:busy="uploadingWallpaper" kind="wallpaper" label="登录页壁纸" save-hint="保存设置后生效" />
