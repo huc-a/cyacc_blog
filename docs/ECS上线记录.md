@@ -112,3 +112,14 @@ Umami 已配置每日本机备份及 stats.cyacc.cn 证书自动续期，并通�
 - HTTPS 冒烟：首页、文章列表、转换后的作品/教程文章页、管理登录均 200；`/works` 返回 404；公开 API 已发布总数 38，分类计数 作品 9 / 教程 3。数据库、服务端、前端容器 healthy，migrate 与 media-init 正常退出。
 - 已知小问题：详情接口返回 categoryId 但不含 categoryName，详情页分类徽章回退显示「文章」（列表页正常），待后续小版本补齐。
 - 回滚：旧发布目录与数据卷保留；数据库不做降级，如需整体回退使用部署前备份恢复。
+
+## 2026-11-12 详情分类名修复（ecs-2026-11-12.2）
+
+- 新发布目录：`/opt/cyacc/releases/ecs-2026-11-12.2`；上一发布 `ecs-2026-11-12.1` 保留。生产 `.env` 从上一发布复制（权限 600），仅更新 `RELEASE_TAG`；宿主 Nginx、证书、Umami 未改动。没有新增数据库迁移，Flyway 仍为 V12。
+- 修复内容（提交 `1a11cb8`，已打 git 标签 `ecs-2026-11-12.2`）：公开详情接口此前只返回 categoryId、不含 categoryName，详情页分类徽章只能回退显示「文章」。后端 `ContentService.detail` 按 category_id 回查分类名写入 `categoryName`，`PublicViews.ContentDetail` 白名单新增 `categoryName` 与 `tagNames`；前端 `ContentReader` 元信息行新增分类徽章。后端 49 项测试全过（含新增的公开详情分类断言），前端 typecheck 与 vitest 通过。
+- 同步推送 GitHub（huc-a/cyacc_blog）：`main` 由 7d1b571 快进到 1a11cb8，`optimization-2026-11-12` 分支与标签 `ecs-2026-11-12.1`、`ecs-2026-11-12.2` 一并推送——此前改版分支与 .1 标签只在本地，这次起远程与生产一致。
+- 源码包 SHA-256：`b9ec29818f8c7010941169054cb5f9f7f19e65933b6d2314129b508b8ecf74f7`。包中不含 `.local`、`.env`、媒体与构建产物。
+- 更新前完整备份：`/var/backups/cyacc/backup-20261112T113506Z`（数据库 + 媒体，备份后旧服务恢复）。
+- 切换结果：migrate 与 media-init 正常退出（0），数据库、服务端、前端容器 healthy，镜像标签 ecs-2026-11-12.2，本机健康检查通过。
+- HTTPS 冒烟：首页、文章列表均 200，已发布总数 41；三篇新作品文章（/articles/46、47、48）详情接口均返回 `categoryName: 作品` 与完整 `tagNames`，详情页 SSR 含分类徽章「作品」。
+- 回滚：旧发布目录与数据卷保留；无数据库变更，可直接按 Compose 切回 ecs-2026-11-12.1。
