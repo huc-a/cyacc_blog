@@ -101,3 +101,14 @@ Umami 已配置每日本机备份及 stats.cyacc.cn 证书自动续期，并通�
 - 更新前备份 `/var/backups/cyacc/backup-20261110T035908Z`，备份脚本验证 19 张表、8 个媒体文件，并在备份后恢复旧服务。更新时 migrate 与 media-init 正常退出 0；数据库、服务端、前端均为 healthy。Flyway 版本仍为 V8，没有新增迁移。
 - 首页、文章、作品/教程/羊毛类型筛选、管理登录 HTTPS 均 HTTP 200；`/works`、`/tutorials`、`/deals` 返回 302 到固定的文章列表并附上对应类型参数。线上 API 返回作品 9 条、教程 3 条；两个筛选页 SSR 均包含相应条目。匿名管理 taxonomy API 返回 401。
 - `pnpm typecheck`、Nuxt 生产构建和 Java package（`-DskipTests`）通过。未重跑 Java 集成测试或浏览器 E2E；既有内联搜索自动聚焦 E2E 待修项未纳入本轮。
+
+## 2026-11-12 内容类型收敛与改版上线（ecs-2026-11-12.1）
+
+- 新发布目录：`/opt/cyacc/releases/ecs-2026-11-12.1`；上一发布 `ecs-2026-11-10.1` 保留。生产 `.env` 从上一发布复制（权限 600），仅更新 `RELEASE_TAG` 并新增 `TRUST_FORWARDED_HEADERS=true`（宿主 Nginx 覆盖转发头，登录限流按真实来源计数）。宿主 Nginx、证书、Umami 未改动。
+- 源码为本地分支 `optimization-2026-11-12`（14 个提交，含三批优化、前台改版与类型挖除），已打 git 标签 `ecs-2026-11-12.1`。源码包 SHA-256：`91109c27061d9ef09de8f0869ec297fa55fe4cba10c28ee0dfa585df1eee60ed`。包中不含 `.local`、`.env`、媒体与构建产物。
+- 更新前完整备份：`/var/backups/cyacc/backup-20261112T105910Z`（部署当晚新建，脚本校验通过，备份后旧服务恢复）。
+- 内容转换（先于迁移执行，单事务）：已发布作品 9 篇、教程 3 篇转为文章——作品正文保留并在文末附项目状态/技术栈/源码地址，教程正文由简介+前置要求+全部章节按序合并；两类分别归入既有分类「作品」（id 1）与「教程」（id 2）；空分类「羊毛」（id 3）删除。生产库原无 pg_trgm 扩展（旧版 init-db 未包含），已由超级用户预先 CREATE EXTENSION。
+- 首次切换时 V12 失败回滚：回收站内另有 4 篇已删除的作品草稿未转换，触发类型 check 约束；补转后第二次切换成功。期间站点中断约数分钟。Flyway 最终 V8 → V12（V9 索引与旧表清理、V10 pg_trgm 索引、V11 媒体展示图列、V12 删除五张类型表并把 content 类型约束收紧为仅 article、站点 homeModules 收敛为 ["article"]）。
+- HTTPS 冒烟：首页、文章列表、转换后的作品/教程文章页、管理登录均 200；`/works` 返回 404；公开 API 已发布总数 38，分类计数 作品 9 / 教程 3。数据库、服务端、前端容器 healthy，migrate 与 media-init 正常退出。
+- 已知小问题：详情接口返回 categoryId 但不含 categoryName，详情页分类徽章回退显示「文章」（列表页正常），待后续小版本补齐。
+- 回滚：旧发布目录与数据卷保留；数据库不做降级，如需整体回退使用部署前备份恢复。
