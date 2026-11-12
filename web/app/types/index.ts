@@ -1,20 +1,12 @@
-export type ContentType = 'article' | 'work' | 'tutorial' | 'deal'
+export type ContentType = 'article'
 export interface Taxon { id: number; name: string; slug: string; contentType?: ContentType; count?: number; sortOrder?: number }
 export interface Category { id: number; name: string; slug: string; count?: number; sortOrder: number }
-export interface Chapter { chapterKey: string; slug: string; title: string; bodyMarkdown: string }
-export interface Details {
-  demoUrl?: string; sourceUrl?: string; projectStatus?: string; techStack?: string[];
-  difficulty?: string; prerequisitesMarkdown?: string; chapters?: Chapter[];
-  claimUrl?: string; benefitText?: string;
-  requirementsMarkdown?: string; startsAt?: string | null; endsAt?: string | null;
-  validity?: string; verification?: { result: string; verifiedAt: string; evidenceUrl: string; note: string } | null;
-}
 export interface Content {
   id: number; contentType: ContentType; slug: string; title: string; summary: string;
   publishStatus: 'draft' | 'published' | 'offline'; revisionId: number; revisionNo: number;
   revisionState?: 'editing' | 'frozen'; lockVersion?: number; createdAt?: string; updatedAt?: string;
   firstPublishedAt?: string; lastPublishedAt?: string; deletedAt?: string;
-  coverAssetId?: number | null; bodyMarkdown?: string; details?: Details;
+  coverAssetId?: number | null; bodyMarkdown?: string;
   tags?: Taxon[]; tagNames?: string[]; tagIds?: number[]; galleryAssetIds?: number[]; categoryId?: number | null; categoryName?: string | null;
   navigation?: { previous: ContentNeighbor | null; next: ContentNeighbor | null };
 }

@@ -5,7 +5,7 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface DetailMapper {
-  Map<String, Object> read(@Param("id") long id, @Param("type") String type);
+  Map<String, Object> read(@Param("id") long id);
 
   void save(@Param("id") long id, @Param("input") ContentInput input);
 
@@ -32,23 +32,6 @@ public interface DetailMapper {
   @Select("SELECT EXISTS(SELECT 1 FROM category WHERE id=#{id})")
   boolean categoryExists(long id);
 
-  @Select(
-      "SELECT chapter_key,slug,title,body_markdown FROM tutorial_chapter WHERE"
-          + " tutorial_revision_id=#{id} ORDER BY sort_order,id")
-  List<Map<String, Object>> chapters(long id);
-
-  @Delete("DELETE FROM tutorial_chapter WHERE tutorial_revision_id=#{id}")
-  void clearChapters(long id);
-
-  @Insert(
-      "INSERT INTO"
-          + " tutorial_chapter(tutorial_revision_id,chapter_key,slug,title,body_markdown,sort_order)"
-          + " VALUES(#{id},#{chapter.chapterKey},#{chapter.slug},#{chapter.title},#{chapter.bodyMarkdown},#{sort})")
-  void chapter(
-      @Param("id") long id,
-      @Param("chapter") ContentDetails.Chapter chapter,
-      @Param("sort") int sort);
-
   @Delete("DELETE FROM revision_media WHERE revision_id=#{id}")
   void clearMedia(long id);
 
@@ -65,22 +48,4 @@ public interface DetailMapper {
       "SELECT media_asset_id FROM revision_media WHERE revision_id=#{id} AND usage_type='gallery'"
           + " ORDER BY sort_order,id")
   List<Long> gallery(long id);
-
-  @Select(
-      "SELECT result,verified_at,evidence_url,note FROM deal_verification_log WHERE"
-          + " revision_id=#{id} ORDER BY verified_at DESC,id DESC LIMIT 1")
-  Map<String, Object> verification(long id);
-
-  @Insert(
-      "INSERT INTO"
-          + " deal_verification_log(content_id,revision_id,result,evidence_url,note,operator_id)"
-          + " VALUES(#{id},#{revisionId},#{result},#{url},#{note},(SELECT id FROM admin_user WHERE"
-          + " username=#{actor}))")
-  void verify(
-      @Param("id") long id,
-      @Param("revisionId") long revisionId,
-      @Param("result") String result,
-      @Param("url") String url,
-      @Param("note") String note,
-      @Param("actor") String actor);
 }

@@ -49,11 +49,11 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     return ((Number) row.get(key)).longValue();
   }
 
-  ContentDetails details(Map<String, Object> values) {
-    return json.convertValue(values, ContentDetails.class);
+  Object details(Map<String, Object> values) {
+    return values;
   }
 
-  ContentDetails completeDetails() {
+  Object completeDetails() {
     return details(
         Map.of(
             "sourceUrl",
@@ -79,19 +79,10 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
                     "章节正文"))));
   }
 
-  ContentInput input(String type, String slug, String title, long version, ContentDetails d) {
+  ContentInput input(String type, String slug, String title, long version, Object ignored) {
     return new ContentInput(
-        type,
-        slug,
-        title,
-        "摘要 " + title,
-        "# 正文 " + title,
-        version,
-        null,
-        List.of(),
-        null,
-        List.of(),
-        d);
+        type, slug, title, "摘要 " + title, "# 正文 " + title, version, null, List.of(), null, null,
+        List.of());
   }
 
   private static final java.util.concurrent.atomic.AtomicInteger PNG_VARIANT =
@@ -132,8 +123,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
             List.of(),
             categoryId,
             null,
-            List.of(),
-            null);
+            List.of());
     var draft = contents.create(input);
     long contentId = n(draft, "id");
     var saved = contents.save(contentId, input);
@@ -170,7 +160,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
             + " publish_status='published'");
     var sequence = new ArrayList<Map<String, Object>>();
     for (int i = 0; i < 7; i++) {
-      String type = i == 4 ? "work" : "article";
+      String type = "article";
       var item = contents.create(input(type, slug(), "公开标题 " + i, 0, completeDetails()));
       if (i != 1) item = contents.publish(n(item, "id"), n(item, "lockVersion"));
       jdbc.update(
@@ -181,6 +171,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     var current = sequence.get(2);
     var next = sequence.get(6);
     contents.transition(n(sequence.get(3), "id"), n(sequence.get(3), "lockVersion"), "offline");
+    contents.transition(n(sequence.get(4), "id"), n(sequence.get(4), "lockVersion"), "offline");
     contents.transition(n(sequence.get(5), "id"), n(sequence.get(5), "lockVersion"), "trash");
     previous =
         contents.save(
@@ -235,8 +226,8 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
             null,
             List.of(n(oldTag, "id")),
             null,
-            List.of(),
-            null);
+            null,
+            List.of());
     var item = contents.create(input);
     long id = n(item, "id");
     var published = contents.publish(id, 0);
@@ -253,8 +244,8 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
                 null,
                 List.of(n(nextTag, "id")),
                 null,
-                List.of(),
-                null));
+                null,
+                List.of()));
     var visible =
         (List<Map<String, Object>>)
             contents
@@ -388,9 +379,9 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         .andExpect(status().isBadRequest());
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"work", "tutorial", "deal"})
-  void everyTypePreservesItsPublishedSnapshot(String type) {
+  @Test
+  void publishedSnapshotIsPreserved() {
+    String type = "article";
     String slug = slug();
     var a = contents.create(input(type, slug, "旧标题", 0, completeDetails()));
     long id = n(a, "id");
@@ -406,62 +397,13 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
   }
 
   @Test
-  void chapterKeysAndOrderAreVersionedAndFrozen() {
-    UUID first = UUID.randomUUID(), second = UUID.randomUUID();
-    String slug = slug();
-    var chapters =
-        List.of(
-            Map.of("chapterKey", first, "slug", "one", "title", "一", "bodyMarkdown", "正文一"),
-            Map.of("chapterKey", second, "slug", "two", "title", "二", "bodyMarkdown", "正文二"));
-    var a =
-        contents.create(input("tutorial", slug, "教程", 0, details(Map.of("chapters", chapters))));
-    long id = n(a, "id");
-    var p = contents.publish(id, 0);
-    var reordered = List.of(chapters.get(1), chapters.get(0));
-    var changed =
-        contents.save(
-            id,
-            input(
-                "tutorial",
-                slug,
-                "教程二",
-                n(p, "lockVersion"),
-                details(Map.of("chapters", reordered))));
-    assertThat(detailMapper.chapters(n(p, "revisionId")).get(0).get("chapter_key"))
-        .isEqualTo(first);
-    assertThat(detailMapper.chapters(n(changed, "revisionId")).get(0).get("chapter_key"))
-        .isEqualTo(second);
-    assertThatThrownBy(
-            () ->
-                jdbc.update(
-                    "UPDATE tutorial_chapter SET title='changed' WHERE tutorial_revision_id=?",
-                    n(p, "revisionId")))
-        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
-    assertThatThrownBy(
-            () ->
-                contents.save(
-                    id,
-                    input(
-                        "tutorial",
-                        slug,
-                        "重复章节",
-                        n(changed, "lockVersion"),
-                        details(Map.of("chapters", List.of(chapters.get(0), chapters.get(0)))))))
-        .isInstanceOf(ApiException.class);
-    var incomplete =
-        contents.create(input("tutorial", slug(), "空教程", 0, ContentDetails.defaults()));
-    assertThatThrownBy(() -> contents.publish(n(incomplete, "id"), 0))
-        .isInstanceOf(ApiException.class);
-  }
-
-  @Test
   void tagsCoverAndMediaStayIsolated() throws Exception {
     long cover = upload();
     String tagName = "hidden-" + slug();
     var tag = new HashMap<String, Object>(Map.of("name", tagName, "slug", slug()));
     taxonomy.createTag(tag);
     String slug = slug();
-    var a = contents.create(input("article", slug, "旧标题", 0, ContentDetails.defaults()));
+    var a = contents.create(input("article", slug, "旧标题", 0, null));
     long id = n(a, "id");
     var p = contents.publish(id, 0);
     var next =
@@ -474,9 +416,9 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
             n(p, "lockVersion"),
             null,
             List.of(n(tag, "id")),
+            null,
             cover,
-            List.of(),
-            null);
+            List.of());
     var changed = contents.save(id, next);
     assertThat(contents.publicDetail(slug).coverAssetId()).isNull();
     assertThat(
@@ -571,8 +513,8 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
 
   @Test
   void blankSlugGetsNextNumericSlug() {
-    var first = contents.create(input("article", null, "自动地址一", 0, ContentDetails.defaults()));
-    var second = contents.create(input("article", null, "自动地址二", 0, ContentDetails.defaults()));
+    var first = contents.create(input("article", null, "自动地址一", 0, null));
+    var second = contents.create(input("article", null, "自动地址二", 0, null));
     String firstSlug = (String) first.get("slug"), secondSlug = (String) second.get("slug");
     assertThat(firstSlug).matches("[0-9]+");
     assertThat(secondSlug).matches("[0-9]+");
@@ -660,120 +602,16 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
   }
 
   @Test
-  void unsafeLinksDatesAndIncompletePublicationAreRejected() {
+  void nonArticleTypesAreRejected() {
     assertThatThrownBy(
-            () -> contents.create(input("website", slug(), "网站", 0, ContentDetails.defaults())))
+            () -> contents.create(input("website", slug(), "网站", 0, null)))
         .isInstanceOf(ApiException.class);
-    assertThatThrownBy(
-            () ->
-                contents.create(
-                    input(
-                        "deal",
-                        slug(),
-                        "活动",
-                        0,
-                        details(
-                            Map.of(
-                                "startsAt",
-                                "2026-10-21T00:00:00Z",
-                                "endsAt",
-                                "2026-10-20T00:00:00Z")))))
+    assertThatThrownBy(() -> contents.create(input("work", slug(), "作品", 0, null)))
         .isInstanceOf(ApiException.class);
-    for (String type : List.of("deal")) {
-      var draft = contents.create(input(type, slug(), "未完整", 0, ContentDetails.defaults()));
-      assertThatThrownBy(() -> contents.publish(n(draft, "id"), 0))
-          .isInstanceOf(ApiException.class);
-    }
+    assertThatThrownBy(() -> contents.create(input("tutorial", slug(), "教程", 0, null)))
+        .isInstanceOf(ApiException.class);
+    assertThatThrownBy(() -> contents.create(input("deal", slug(), "活动", 0, null)))
+        .isInstanceOf(ApiException.class);
   }
 
-  @Test
-  void dealValidityPrioritizesStartAndExpiryOverManualVerification() {
-    var service = new DetailService(null);
-    var d = new HashMap<String, Object>();
-    d.put("verification", Map.of("result", "valid"));
-    d.put("startsAt", Instant.now().plusSeconds(3600).toString());
-    assertThat(service.validity(d)).isEqualTo("upcoming");
-    d.remove("startsAt");
-    d.put("endsAt", Instant.now().minusSeconds(60).toString());
-    assertThat(service.validity(d)).isEqualTo("expired");
-    d.remove("endsAt");
-    assertThat(service.validity(d)).isEqualTo("valid");
-    d.put("verification", Map.of("result", "invalid"));
-    assertThat(service.validity(d)).isEqualTo("invalid");
-  }
-
-  @Test
-  void homepageModulesFilterFeedWithoutHidingSectionPages() {
-    String title = "home-filter-" + slug();
-    var work = contents.create(input("work", slug(), title, 0, completeDetails()));
-    contents.publish(n(work, "id"), 0);
-    var original = site.read();
-    var values =
-        json.convertValue(
-            original.get("settings"),
-            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
-    values.put("homeModules", List.of("article"));
-    var updated =
-        site.save(json.convertValue(values, SiteSettings.class), n(original, "lockVersion"));
-    try {
-      assertThat(
-              contents
-                  .list(new ContentQuery(true, "", "all", title, null, null, null, true, 1, 10))
-                  .get("total"))
-          .isEqualTo(0L);
-      assertThat(
-              contents
-                  .list(
-                      new ContentQuery(true, "work", "all", title, null, null, null, false, 1, 10))
-                  .get("total"))
-          .isEqualTo(1L);
-    } finally {
-      site.save((SiteSettings) original.get("settings"), n(updated, "lockVersion"));
-    }
-  }
-
-  @Test
-  void verificationIsBoundToPublishedRevisionAndRespectsDates() throws Exception {
-    String slug = slug();
-    var a = contents.create(input("deal", slug, "活动", 0, completeDetails()));
-    long id = n(a, "id");
-    var p = contents.publish(id, 0);
-    mvc.perform(
-            post("/api/admin/contents/" + id + "/verify")
-                .with(csrf())
-                .contentType("application/json")
-                .content(
-                    json.writeValueAsString(
-                        Map.of(
-                            "revisionId",
-                            n(p, "revisionId"),
-                            "result",
-                            "valid",
-                            "evidenceUrl",
-                            "https://example.com",
-                            "note",
-                            "已人工确认"))))
-        .andExpect(status().isOk());
-    assertThat(contents.publicDetail(slug).details().get("validity")).isEqualTo("valid");
-    var changed =
-        contents.save(id, input("deal", slug, "新活动", n(p, "lockVersion"), completeDetails()));
-    contents.publish(id, n(changed, "lockVersion"));
-    assertThat(contents.publicDetail(slug).details().get("validity")).isEqualTo("unknown");
-    mvc.perform(
-            post("/api/admin/contents/" + id + "/verify")
-                .with(csrf())
-                .contentType("application/json")
-                .content(
-                    json.writeValueAsString(
-                        Map.of(
-                            "revisionId",
-                            n(p, "revisionId"),
-                            "result",
-                            "valid",
-                            "evidenceUrl",
-                            "",
-                            "note",
-                            ""))))
-        .andExpect(status().isConflict());
-  }
 }

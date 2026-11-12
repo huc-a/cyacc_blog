@@ -20,8 +20,7 @@ public record SiteSettings(
     @Min(0) @Max(28) int blur,
     @Min(16) @Max(23) int fontSize,
     @DecimalMin("1.6") @DecimalMax("2.2") double lineHeight,
-    @NotEmpty @Size(max = 4)
-        List<@Pattern(regexp = "article|work|tutorial|deal") String> homeModules,
+    @NotEmpty @Size(max = 1) List<@Pattern(regexp = "article") String> homeModules,
     @Positive Long avatarAssetId,
     @NotNull @Size(max = 80) String icpNumber,
     @DecimalMin("0") @DecimalMax("1") Double navTopOpacity,

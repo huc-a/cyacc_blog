@@ -30,8 +30,7 @@ public class ContentService {
   }
 
   public static void type(String type) {
-    if (!Set.of("article", "work", "tutorial", "deal").contains(type))
-      throw new ApiException(400, "内容类型无效");
+    if (!"article".equals(type)) throw new ApiException(400, "内容类型无效");
   }
 
   /** Admin/internal list: full row maps, including private bookkeeping fields. */
@@ -166,7 +165,7 @@ public class ContentService {
     out.put("summary", r.get("summary"));
     out.put("coverAssetId", r.get("cover_asset_id"));
     out.put("categoryId", r.get("category_id"));
-    out.putAll(details.read(rid, c.get("content_type").toString()));
+    out.putAll(details.read(rid));
     if (publicOnly) removePrivateFields(out);
     return out;
   }
@@ -268,8 +267,7 @@ public class ContentService {
             tagIds,
             categoryId,
             null,
-            List.of(),
-            ContentDetails.defaults());
+            List.of());
     var created = create(input);
     audit.record("content.import", "article", number(created, "id"));
     return created;
@@ -361,7 +359,7 @@ public class ContentService {
     } else {
       long rid = ((Number) working).longValue();
       var r = mapper.revision(rid);
-      details.validatePublish(rid, c.get("content_type").toString(), r.get("title").toString());
+      details.validatePublish(rid, r.get("title").toString());
       if (mapper.freeze(rid) != 1) throw ApiException.conflict();
       mapper.publish(id, rid);
     }

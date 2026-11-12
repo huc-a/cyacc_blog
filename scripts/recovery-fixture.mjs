@@ -29,12 +29,12 @@ if (mode === 'prepare') {
   const form = new FormData(); form.append('file', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNImNAAAALEAXGxfUYHAAAAAElFTkSuQmCC', 'base64')], { type: 'image/png' }), `${token}.png`)
   const csrf = await json('/api/auth/csrf')
   state.asset = await (await api('/api/admin/media', { method: 'POST', headers: { [csrf.headerName]: csrf.token }, body: form })).json()
-  for (const type of ['article', 'tutorial']) {
-    let item = await change('POST', '/api/admin/contents', { type, slug: `${token}-${type}`, title: `恢复演练 ${type}`, summary: '临时验收数据，演练后进入回收站', bodyMarkdown: '恢复演练正文', lockVersion: 0, coverAssetId: state.asset.id, details: type === 'tutorial' ? { chapters: [{ chapterKey: crypto.randomUUID(), slug: 'start', title: '恢复章节', bodyMarkdown: '章节恢复内容' }] } : {} })
+  for (const type of ['article']) {
+    let item = await change('POST', '/api/admin/contents', { type, slug: `${token}-${type}`, title: `恢复演练 ${type}`, summary: '临时验收数据，演练后进入回收站', bodyMarkdown: '恢复演练正文', lockVersion: 0, coverAssetId: state.asset.id })
     item = await change('POST', `/api/admin/contents/${item.id}/publish`, { lockVersion: item.lockVersion }); state.items.push(item)
   }
   await change('PUT', '/api/admin/site', { settings: { ...original.settings, backgroundAssetId: state.asset.id }, lockVersion: original.lockVersion })
-  writeFileSync(statePath, JSON.stringify(state, null, 2)); console.log('Prepared published article, tutorial, cover and background references')
+  writeFileSync(statePath, JSON.stringify(state, null, 2)); console.log('Prepared published article, cover and background references')
 } else {
   const state = JSON.parse(readFileSync(statePath, 'utf8'))
   if (mode === 'verify') {
@@ -43,12 +43,11 @@ if (mode === 'prepare') {
     for (const item of state.items) {
       const restored = await json(`/api/public/contents/${item.slug}`)
       assert(restored.bodyMarkdown === '恢复演练正文' && restored.coverAssetId === state.asset.id, 'Restored public revision and cover')
-      if (item.contentType === 'tutorial') assert(restored.details.chapters[0].bodyMarkdown === '章节恢复内容', 'Restored tutorial chapter')
     }
     assert((await json('/api/public/site')).backgroundAssetId === state.asset.id, 'Restored background setting')
     const bytes = new Uint8Array(await (await api(`/api/public/media/${state.asset.id}`)).arrayBuffer())
     assert(bytes.length > 20, 'Restored public media file')
-    console.log('Recovery verified: administrator login, published revisions, tutorial chapter, cover, background and media bytes')
+    console.log('Recovery verified: administrator login, published revisions, cover, background and media bytes')
   } else if (mode === 'cleanup') {
     const current = await json('/api/admin/site')
     await change('PUT', '/api/admin/site', { settings: state.original.settings, lockVersion: current.lockVersion })
