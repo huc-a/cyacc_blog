@@ -13,11 +13,10 @@ public record ContentQuery(
     LocalDate date,
     boolean home,
     int page,
-    int size
-) {
-    public ContentQuery {
-        type = type == null ? "" : type;
-        status = status == null ? "all" : status;
-        q = q == null ? "" : q;
-    }
+    int size) {
+  public ContentQuery {
+    type = type == null ? "" : type;
+    status = status == null ? "all" : status;
+    q = q == null ? "" : q;
+  }
 }

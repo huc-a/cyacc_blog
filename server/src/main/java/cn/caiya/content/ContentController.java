@@ -7,28 +7,74 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class ContentController {
-    private final ContentService service;
-    public ContentController(ContentService service) {this.service=service;}
-    public record Version(@NotNull @PositiveOrZero Long lockVersion) {}
-    @GetMapping("/api/public/contents")
-    public PublicViews.Page<PublicViews.ContentItem> publicList(@RequestParam(defaultValue="") String type,@RequestParam(defaultValue="") String q,
-        @RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,
-        @RequestParam(required=false) Long tagId,
-        @RequestParam(required=false) java.time.LocalDate date,@RequestParam(defaultValue="false") boolean home,@RequestParam(required=false) Long categoryId) {
-        return service.publicList(new ContentQuery(true,type,"all",q,tagId,categoryId,date,home,page,size));
-    }
-    @GetMapping("/api/public/contents/{slug}") public PublicViews.ContentDetail publicDetail(@PathVariable String slug) {return service.publicDetail(slug);}
-    @GetMapping("/api/admin/contents")
-    public Map<String,Object> adminList(@RequestParam(defaultValue="") String type,@RequestParam(defaultValue="all") String status,
-        @RequestParam(defaultValue="") String q,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,
-        @RequestParam(required=false) Long tagId,@RequestParam(required=false) Long categoryId) {
-        return service.list(new ContentQuery(false,type,status,q,tagId,categoryId,null,false,page,size));
-    }
-    @GetMapping("/api/admin/contents/{id}") public Map<String,Object> detail(@PathVariable long id) {return service.detail(id,false);}
-    @GetMapping("/api/admin/contents/{id}/revisions") public List<Map<String,Object>> history(@PathVariable long id) {return service.history(id);}
-    @PostMapping("/api/admin/contents") public Map<String,Object> create(@Valid @RequestBody ContentInput input) {return service.create(input);}
-    @PutMapping("/api/admin/contents/{id}") public Map<String,Object> save(@PathVariable long id,@Valid @RequestBody ContentInput input) {return service.save(id,input);}
-    @PostMapping("/api/admin/contents/{id}/publish") public Map<String,Object> publish(@PathVariable long id,@Valid @RequestBody Version version) {return service.publish(id,version.lockVersion());}
-    @PostMapping("/api/admin/contents/{id}/{action:offline|trash|restore}")
-    public Map<String,Object> transition(@PathVariable long id,@PathVariable String action,@Valid @RequestBody Version version) {return service.transition(id,version.lockVersion(),action);}
+  private final ContentService service;
+
+  public ContentController(ContentService service) {
+    this.service = service;
+  }
+
+  public record Version(@NotNull @PositiveOrZero Long lockVersion) {}
+
+  @GetMapping("/api/public/contents")
+  public PublicViews.Page<PublicViews.ContentItem> publicList(
+      @RequestParam(defaultValue = "") String type,
+      @RequestParam(defaultValue = "") String q,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) Long tagId,
+      @RequestParam(required = false) java.time.LocalDate date,
+      @RequestParam(defaultValue = "false") boolean home,
+      @RequestParam(required = false) Long categoryId) {
+    return service.publicList(
+        new ContentQuery(true, type, "all", q, tagId, categoryId, date, home, page, size));
+  }
+
+  @GetMapping("/api/public/contents/{slug}")
+  public PublicViews.ContentDetail publicDetail(@PathVariable String slug) {
+    return service.publicDetail(slug);
+  }
+
+  @GetMapping("/api/admin/contents")
+  public Map<String, Object> adminList(
+      @RequestParam(defaultValue = "") String type,
+      @RequestParam(defaultValue = "all") String status,
+      @RequestParam(defaultValue = "") String q,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(required = false) Long tagId,
+      @RequestParam(required = false) Long categoryId) {
+    return service.list(
+        new ContentQuery(false, type, status, q, tagId, categoryId, null, false, page, size));
+  }
+
+  @GetMapping("/api/admin/contents/{id}")
+  public Map<String, Object> detail(@PathVariable long id) {
+    return service.detail(id, false);
+  }
+
+  @GetMapping("/api/admin/contents/{id}/revisions")
+  public List<Map<String, Object>> history(@PathVariable long id) {
+    return service.history(id);
+  }
+
+  @PostMapping("/api/admin/contents")
+  public Map<String, Object> create(@Valid @RequestBody ContentInput input) {
+    return service.create(input);
+  }
+
+  @PutMapping("/api/admin/contents/{id}")
+  public Map<String, Object> save(@PathVariable long id, @Valid @RequestBody ContentInput input) {
+    return service.save(id, input);
+  }
+
+  @PostMapping("/api/admin/contents/{id}/publish")
+  public Map<String, Object> publish(@PathVariable long id, @Valid @RequestBody Version version) {
+    return service.publish(id, version.lockVersion());
+  }
+
+  @PostMapping("/api/admin/contents/{id}/{action:offline|trash|restore}")
+  public Map<String, Object> transition(
+      @PathVariable long id, @PathVariable String action, @Valid @RequestBody Version version) {
+    return service.transition(id, version.lockVersion(), action);
+  }
 }
