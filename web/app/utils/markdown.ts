@@ -9,15 +9,24 @@ markdown.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   tokens[idx]!.attrSet('rel', 'noopener noreferrer')
   return baseLink(tokens, idx, options, env, self)
 }
+// Heading anchors are derived from the heading text (not their position),
+// so inserting or removing a section does not break existing #anchor links.
+// Repeated headings get a numeric suffix.
+function headingId(text: string, seen: Map<string, number>) {
+  const base = text.toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'section'
+  const n = (seen.get(base) || 0) + 1
+  seen.set(base, n)
+  return n === 1 ? base : `${base}-${n}`
+}
 export function renderMarkdown(source: string, preview = false) {
   const tokens = markdown.parse(source, {})
   const headings: { id: string; text: string; level: number }[] = []
-  let count = 0
+  const seen = new Map<string, number>()
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]!
     if ((token.type === 'heading_open' || token.type === 'heading_close') && token.tag === 'h1') token.tag = 'h2'
     if (token.type === 'heading_open') {
-      const id = `section-${++count}`
+      const id = headingId(tokens[i + 1]?.content || '', seen)
       token.attrSet('id', id)
       headings.push({ id, text: tokens[i + 1]?.content || '', level: Number(token.tag.slice(1)) })
     }

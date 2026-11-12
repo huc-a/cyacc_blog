@@ -12,8 +12,25 @@ final class LoginProtectionFilter extends OncePerRequestFilter {
     private final CaptchaService captcha;
     private final ObjectMapper json;
     private final boolean captchaAlwaysRequired;
-    LoginProtectionFilter(LoginProtection protection,CaptchaService captcha,ObjectMapper json,boolean captchaAlwaysRequired) {this.protection=protection;this.captcha=captcha;this.json=json;this.captchaAlwaysRequired=captchaAlwaysRequired;}
+    private final boolean trustForwardedHeaders;
+    LoginProtectionFilter(LoginProtection protection,CaptchaService captcha,ObjectMapper json,boolean captchaAlwaysRequired,boolean trustForwardedHeaders) {this.protection=protection;this.captcha=captcha;this.json=json;this.captchaAlwaysRequired=captchaAlwaysRequired;this.trustForwardedHeaders=trustForwardedHeaders;}
     static String username(HttpServletRequest req) {String value=req.getParameter("username");return value==null?"":value.trim();}
+    /**
+     * Rate-limit identity for a request. By default the direct peer address;
+     * only when the deployment explicitly trusts its reverse proxy (which
+     * must overwrite, not append, X-Forwarded-For) is the first forwarded
+     * address used. Anything that does not look like an IP literal is ignored.
+     */
+    static String source(HttpServletRequest req,boolean trustForwardedHeaders) {
+        if(trustForwardedHeaders) {
+            String forwarded=req.getHeader("X-Forwarded-For");
+            if(forwarded!=null) {
+                String first=forwarded.split(",",2)[0].trim();
+                if(first.length()<=45 && first.matches("[0-9a-fA-F:.]+")) return first;
+            }
+        }
+        return req.getRemoteAddr();
+    }
     static void error(ObjectMapper json,HttpServletResponse res,int status,String message,boolean captcha,int retry) throws IOException {
         res.setStatus(status);res.setContentType("application/json;charset=UTF-8");res.setHeader("Cache-Control","no-store");
         if(retry>0) res.setHeader("Retry-After",Integer.toString(retry));
@@ -21,7 +38,7 @@ final class LoginProtectionFilter extends OncePerRequestFilter {
     }
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws IOException,ServletException {
         if(!req.getMethod().equals("POST")||!req.getRequestURI().equals(req.getContextPath()+"/api/auth/login")) {chain.doFilter(req,res);return;}
-        String source=req.getRemoteAddr(),username=username(req);
+        String source=source(req,trustForwardedHeaders),username=username(req);
         int retry=protection.request(source,false);
         if(retry>0) {error(json,res,429,"登录尝试过于频繁，请稍后再试",false,retry);return;}
         if(username.isEmpty()||username.length()>60) {error(json,res,401,"账号或密码错误",false,0);return;}

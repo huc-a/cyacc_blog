@@ -14,8 +14,18 @@ public class TaxonomyController {
     public TaxonomyController(TaxonomyMapper mapper, AuditService audit) { this.mapper=mapper; this.audit=audit; }
     public record Input(@NotBlank @Size(max=60) String name, @NotNull @Size(max=80) @Pattern(regexp="[a-z0-9]+(-[a-z0-9]+)*") String slug) {}
     public record CategoryInput(@NotBlank @Size(max=60) String name, @NotNull @Size(max=80) @Pattern(regexp="[a-z0-9]+(-[a-z0-9]+)*") String slug, @Min(0) @Max(10000) int sortOrder) {}
-    @GetMapping({"/api/public/taxonomy","/api/admin/taxonomy"}) public Map<String,Object> list() {
-        return Map.of("tags", mapper.tags(),"categories",mapper.categories());
+    // Typed views with camelCase fields; the mapper rows previously leaked
+    // raw snake_case column names (created_at, sort_order) to the API.
+    public record TagView(long id, String name, String slug, long count) {}
+    public record CategoryView(long id, String name, String slug, int sortOrder, long count) {}
+    public record TaxonomyView(List<TagView> tags, List<CategoryView> categories) {}
+    @GetMapping({"/api/public/taxonomy","/api/admin/taxonomy"}) public TaxonomyView list() {
+        var tags=mapper.tags().stream().map(row->new TagView(
+            Views.number(row,"id"),(String) row.get("name"),(String) row.get("slug"),Views.number(row,"count"))).toList();
+        var categories=mapper.categories().stream().map(row->new CategoryView(
+            Views.number(row,"id"),(String) row.get("name"),(String) row.get("slug"),
+            (int) Views.number(row,"sort_order"),Views.number(row,"count"))).toList();
+        return new TaxonomyView(tags,categories);
     }
     @PostMapping("/api/admin/taxonomy/tags") @Transactional
     public Map<String,Object> create(@Valid @RequestBody Input input) {

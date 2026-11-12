@@ -14,7 +14,8 @@ describe('shared safe Markdown renderer', () => {
   })
   it('builds stable headings and changes only media paths in admin preview', () => {
     const text = '# 开始\n## 继续\n![图](/api/public/media/12)\n[文档](https://example.com)'
-    expect(renderMarkdown(text).headings.map(h => h.id)).toEqual(['section-1', 'section-2'])
+    expect(renderMarkdown(text).headings.map(h => h.id)).toEqual(['开始', '继续'])
+    expect(renderMarkdown('## 重复\n## 重复').headings.map(h => h.id)).toEqual(['重复', '重复-2'])
     expect(renderMarkdown(text).html).not.toContain('<h1')
     expect(renderMarkdown(text).html).toContain('src="/api/public/media/12"')
     expect(renderMarkdown(text, true).html).toContain('src="/api/admin/media/12/file"')

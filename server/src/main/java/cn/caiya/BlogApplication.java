@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 public class BlogApplication {
     public static void main(String[] args) {
         if (java.util.Arrays.asList(args).contains("--migrate-only")) {

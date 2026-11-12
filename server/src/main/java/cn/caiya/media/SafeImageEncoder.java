@@ -72,6 +72,29 @@ final class SafeImageEncoder {
             } finally {reader.dispose();}
         }
     }
+    /**
+     * Downscaled display variant for raster images wider than 960 px.
+     * Returns null when no variant is useful (GIFs, small images) or the
+     * bytes cannot be decoded; callers fall back to the original file.
+     */
+    static Encoded displayVariant(byte[] encoded,String format) {
+        if(format.equals("gif")) return null;
+        try {
+            var image=ImageIO.read(new ByteArrayInputStream(encoded));
+            if(image==null || image.getWidth()<=960) return null;
+            int width=960, height=Math.max(1,(int) Math.round((double) image.getHeight()*width/image.getWidth()));
+            var scaled=new java.awt.image.BufferedImage(width,height,
+                format.equals("png")?java.awt.image.BufferedImage.TYPE_INT_ARGB:java.awt.image.BufferedImage.TYPE_INT_RGB);
+            var g=scaled.createGraphics();
+            try {
+                g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g.drawImage(image,0,0,width,height,null);
+            } finally {g.dispose();}
+            var bytes=new ByteArrayOutputStream();
+            if(!ImageIO.write(scaled,format,bytes)) return null;
+            return new Encoded(bytes.toByteArray(),width,height);
+        } catch(IOException|RuntimeException e) {return null;}
+    }
     // IIOMetadataNode.cloneNode does not copy attributes (frame offsets, timing, palette).
     private static IIOMetadataNode copyMetadata(Node source) {
         var copy=new IIOMetadataNode(source.getNodeName());

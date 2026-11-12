@@ -13,6 +13,9 @@ public class DetailService {
     public DetailService(DetailMapper mapper) {this.mapper=mapper;}
     public void validate(ContentInput input) {
         var d=input.details();
+        // Categories are an article-only concept (see V8); other content types
+        // organise through tags and their own detail fields instead.
+        if(input.categoryId()!=null && !"article".equals(input.type())) throw new ApiException(400,"分类仅适用于文章");
         if(input.categoryId()!=null && !mapper.categoryExists(input.categoryId())) throw new ApiException(400,"内容分类不存在");
         for(var url:List.of(d.demoUrl(),d.sourceUrl(),d.claimUrl())) SafeUrls.check(url);
         if(d.startsAt()!=null && d.endsAt()!=null && !d.endsAt().isAfter(d.startsAt())) throw new ApiException(400,"截止时间必须晚于开始时间");
@@ -43,7 +46,8 @@ public class DetailService {
         Object body=d.remove(type.equals("tutorial")?"introMarkdown":"bodyMarkdown");
         if(type.equals("tutorial")) d.put("chapters",mapper.chapters(rid).stream().map(Views::camel).toList());
         if(type.equals("deal")) {var verification=mapper.verification(rid);d.put("verification",verification==null?null:Views.camel(verification));d.put("validity",validity(d));}
-        var result=new HashMap<String,Object>();result.put("bodyMarkdown",body==null?"":body);result.put("details",d);result.put("tags",mapper.tags(rid));result.put("tagIds",mapper.tags(rid).stream().map(t->t.get("id")).toList());result.put("galleryAssetIds",mapper.gallery(rid));result.put("categoryId",mapper.categoryId(rid));return result;
+        var tags=mapper.tags(rid);
+        var result=new HashMap<String,Object>();result.put("bodyMarkdown",body==null?"":body);result.put("details",d);result.put("tags",tags);result.put("tagIds",tags.stream().map(t->t.get("id")).toList());result.put("galleryAssetIds",mapper.gallery(rid));result.put("categoryId",mapper.categoryId(rid));return result;
     }
     public String validity(Map<String,Object> d) {
         var now=Instant.now();

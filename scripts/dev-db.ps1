@@ -30,4 +30,8 @@ foreach ($dbName in @('caiya','caiya_test')) {
         if ($LASTEXITCODE -ne 0) { throw 'Database creation failed' }
     }
 }
+foreach ($dbName in @('caiya','caiya_test')) {
+    & "$PgBin\psql.exe" -h 127.0.0.1 -p $Port -U postgres -d $dbName -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'pg_trgm extension failed' }
+}
 Write-Output "Project PostgreSQL ready on 127.0.0.1:$Port; development only, loopback trust authentication."

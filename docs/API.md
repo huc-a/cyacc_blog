@@ -12,7 +12,7 @@
 
 ## 内容
 
-统一五类内容端点避免复制 API，类型通过 `type=article|work|tutorial|deal` 指定。
+统一四类内容端点避免复制 API，类型通过 `type=article|work|tutorial|deal` 指定。
 
 - `GET /api/public/contents?type=&q=&page=1&size=10` 仅公开冻结版本，返回 items/total/page/size。
 - 列表项包含 `tagNames` 字符串数组，用于卡片底部标签；公开列表读取已发布版本，管理列表读取当前工作版本，未发布的标签修改不会提前公开。

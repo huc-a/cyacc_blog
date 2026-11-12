@@ -1,5 +1,7 @@
 package cn.caiya;
 
+import cn.caiya.content.ContentQuery;
+
 import cn.caiya.common.*;
 import cn.caiya.content.*;
 import cn.caiya.media.*;
@@ -40,8 +42,11 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     ContentInput input(String type,String slug,String title,long version,ContentDetails d) {
         return new ContentInput(type,slug,title,"摘要 "+title,"# 正文 "+title,version,null,List.of(),null,List.of(),d);
     }
+    private static final java.util.concurrent.atomic.AtomicInteger PNG_VARIANT=new java.util.concurrent.atomic.AtomicInteger();
     byte[] png() throws IOException {
-        var image=new java.awt.image.BufferedImage(8,8,java.awt.image.BufferedImage.TYPE_INT_RGB);var output=new ByteArrayOutputStream();ImageIO.write(image,"png",output);return output.toByteArray();
+        // Each upload must be a distinct image: identical bytes are now
+        // deduplicated by sha256 into a single shared asset.
+        var image=new java.awt.image.BufferedImage(8,8,java.awt.image.BufferedImage.TYPE_INT_RGB);image.setRGB(0,0,PNG_VARIANT.incrementAndGet());var output=new ByteArrayOutputStream();ImageIO.write(image,"png",output);return output.toByteArray();
     }
     long upload() throws IOException {return n(media.upload(new MockMultipartFile("file","test.png","image/png",png())),"id");}
 
@@ -54,7 +59,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         var saved=contents.save(contentId,input);
         var published=contents.publish(contentId,n(saved,"lockVersion"));
         assertThat(published.get("categoryId")).isEqualTo(categoryId);
-        assertThat(contents.list(true,"article","all","",1,10,null,null,false,categoryId).get("total")).isEqualTo(1L);
+        assertThat(contents.list(new ContentQuery(true,"article","all","",null,categoryId,null,false,1,10)).get("total")).isEqualTo(1L);
         mvc.perform(get("/api/public/taxonomy")).andExpect(status().isOk()).andExpect(jsonPath("$.categories[?(@.id == "+categoryId+")].name").value("Category "+slug));
         mvc.perform(get("/api/public/contents").param("type","article").param("categoryId",Long.toString(categoryId)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].categoryName").value("Category "+slug));
@@ -105,13 +110,13 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         var input=new ContentInput("article",slug,slug,"摘要","正文",0L,null,List.of(n(oldTag,"id")),null,List.of(),null);
         var item=contents.create(input);long id=n(item,"id");var published=contents.publish(id,0);
         var changed=contents.save(id,new ContentInput("article",slug,slug,"摘要","新正文",n(published,"lockVersion"),null,List.of(n(nextTag,"id")),null,List.of(),null));
-        var visible=(List<Map<String,Object>>)contents.list(true,"article","all",slug,1,10).get("items");
+        var visible=(List<Map<String,Object>>)contents.list(new ContentQuery(true,"article","all",slug,null,null,null,false,1,10)).get("items");
         assertThat(visible).hasSize(1);
         assertThat((List<String>)visible.get(0).get("tagNames")).containsExactly(oldTag.get("name").toString());
-        var working=(List<Map<String,Object>>)contents.list(false,"article","all",slug,1,10).get("items");
+        var working=(List<Map<String,Object>>)contents.list(new ContentQuery(false,"article","all",slug,null,null,null,false,1,10)).get("items");
         assertThat((List<String>)working.get(0).get("tagNames")).containsExactly(nextTag.get("name").toString());
         contents.publish(id,n(changed,"lockVersion"));
-        visible=(List<Map<String,Object>>)contents.list(true,"article","all",slug,1,10).get("items");
+        visible=(List<Map<String,Object>>)contents.list(new ContentQuery(true,"article","all",slug,null,null,null,false,1,10)).get("items");
         assertThat((List<String>)visible.get(0).get("tagNames")).containsExactly(nextTag.get("name").toString());
     }
 
@@ -163,7 +168,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         var p=contents.publish(id,0);var old=contents.publicDetail(slug);
         var changed=contents.save(id,input(type,slug,"新标题",n(p,"lockVersion"),completeDetails()));
         assertThat(contents.publicDetail(slug)).isEqualTo(old);
-        contents.publish(id,n(changed,"lockVersion"));assertThat(contents.publicDetail(slug).get("title")).isEqualTo("新标题");
+        contents.publish(id,n(changed,"lockVersion"));assertThat(contents.publicDetail(slug).title()).isEqualTo("新标题");
         assertThat(contentMapper.revision(n(p,"revisionId")).get("revision_state")).isEqualTo("frozen");
     }
 
@@ -185,13 +190,13 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         String slug=slug();var a=contents.create(input("article",slug,"旧标题",0,ContentDetails.defaults()));long id=n(a,"id");var p=contents.publish(id,0);
         var next=new ContentInput("article",slug,"新标题","新摘要","![图](/api/public/media/"+cover+")",n(p,"lockVersion"),null,List.of(n(tag,"id")),cover,List.of(),null);
         var changed=contents.save(id,next);
-        assertThat(contents.publicDetail(slug).get("coverAssetId")).isNull();
-        assertThat(contents.list(true,"","all",tagName,1,10).get("total")).isEqualTo(0L);
+        assertThat(contents.publicDetail(slug).coverAssetId()).isNull();
+        assertThat(contents.list(new ContentQuery(true,"","all",tagName,null,null,null,false,1,10)).get("total")).isEqualTo(0L);
         assertThat(mediaMapper.isPublic(cover)).isFalse();
         assertThatThrownBy(()->media.delete(cover)).isInstanceOf(ApiException.class);
         contents.publish(id,n(changed,"lockVersion"));
-        assertThat(contents.list(true,"","all",tagName,1,10).get("total")).isEqualTo(1L);
-        assertThat(contents.list(true,"article","all","",1,10,n(tag,"id"),null).get("total")).isEqualTo(1L);
+        assertThat(contents.list(new ContentQuery(true,"","all",tagName,null,null,null,false,1,10)).get("total")).isEqualTo(1L);
+        assertThat(contents.list(new ContentQuery(true,"article","all","",n(tag,"id"),null,null,false,1,10)).get("total")).isEqualTo(1L);
         assertThat(mediaMapper.isPublic(cover)).isTrue();
         mvc.perform(get("/api/public/media/"+cover)).andExpect(status().isOk()).andExpect(content().contentType("image/png"));
         assertThatThrownBy(()->taxonomy.deleteTag(n(tag,"id"))).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
@@ -215,6 +220,13 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         mvc.perform(put("/api/admin/site").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("settings",changed,"lockVersion",n(saved,"lockVersion")+1)))).andExpect(status().isBadRequest());
     }
 
+    @Test void identicalUploadIsDeduplicatedByContentHash() throws Exception {
+        byte[] bytes=png();
+        var first=media.upload(new MockMultipartFile("file","dup.png","image/png",bytes));
+        var second=media.upload(new MockMultipartFile("file","dup-again.png","image/png",bytes));
+        assertThat(n(second,"id")).isEqualTo(n(first,"id"));
+    }
+
     @Test void unsafeLinksDatesAndIncompletePublicationAreRejected() {
         assertThatThrownBy(()->contents.create(input("website",slug(),"网站",0,ContentDetails.defaults()))).isInstanceOf(ApiException.class);
         assertThatThrownBy(()->contents.create(input("deal",slug(),"活动",0,details(Map.of("startsAt","2026-10-21T00:00:00Z","endsAt","2026-10-20T00:00:00Z"))))).isInstanceOf(ApiException.class);
@@ -234,17 +246,17 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
         var original=site.read();var values=json.convertValue(original.get("settings"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});values.put("homeModules",List.of("article"));
         var updated=site.save(json.convertValue(values,SiteSettings.class),n(original,"lockVersion"));
         try {
-            assertThat(contents.list(true,"","all",title,1,10,null,null,true).get("total")).isEqualTo(0L);
-            assertThat(contents.list(true,"work","all",title,1,10).get("total")).isEqualTo(1L);
+            assertThat(contents.list(new ContentQuery(true,"","all",title,null,null,null,true,1,10)).get("total")).isEqualTo(0L);
+            assertThat(contents.list(new ContentQuery(true,"work","all",title,null,null,null,false,1,10)).get("total")).isEqualTo(1L);
         } finally {site.save((SiteSettings)original.get("settings"),n(updated,"lockVersion"));}
     }
 
     @Test void verificationIsBoundToPublishedRevisionAndRespectsDates() throws Exception {
         String slug=slug();var a=contents.create(input("deal",slug,"活动",0,completeDetails()));long id=n(a,"id");var p=contents.publish(id,0);
         mvc.perform(post("/api/admin/contents/"+id+"/verify").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("revisionId",n(p,"revisionId"),"result","valid","evidenceUrl","https://example.com","note","已人工确认")))).andExpect(status().isOk());
-        assertThat(((Map<?,?>)contents.publicDetail(slug).get("details")).get("validity")).isEqualTo("valid");
+        assertThat(contents.publicDetail(slug).details().get("validity")).isEqualTo("valid");
         var changed=contents.save(id,input("deal",slug,"新活动",n(p,"lockVersion"),completeDetails()));contents.publish(id,n(changed,"lockVersion"));
-        assertThat(((Map<?,?>)contents.publicDetail(slug).get("details")).get("validity")).isEqualTo("unknown");
+        assertThat(contents.publicDetail(slug).details().get("validity")).isEqualTo("unknown");
         mvc.perform(post("/api/admin/contents/"+id+"/verify").with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("revisionId",n(p,"revisionId"),"result","valid","evidenceUrl","","note","")))).andExpect(status().isConflict());
     }
 }

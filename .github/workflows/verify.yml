@@ -70,6 +70,9 @@ jobs:
           echo $! > .local/web.pid
           for i in {1..60}; do if curl -fsS http://127.0.0.1:3000/api/public/site > /dev/null; then break; fi; sleep 1; done
           pnpm --dir web test:e2e
+          # Seed smoke test: keeps scripts/seed-demo.mjs from drifting away from the live API.
+          printf '{"username":"%s","password":"%s"}' "$E2E_USERNAME" "$E2E_PASSWORD" > .local/admin-credentials.json
+          API_URL=http://127.0.0.1:8080 node scripts/seed-demo.mjs
       - name: Backup and isolated restore
         run: |
           node scripts/recovery-fixture.mjs prepare

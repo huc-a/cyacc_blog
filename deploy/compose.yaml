@@ -53,6 +53,9 @@ services:
       DB_USER: blog_runtime
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       SPRING_FLYWAY_ENABLED: "false"
+      # Enable only when the bundled nginx (which overwrites X-Forwarded-For
+      # with the real client address) is the sole entry point.
+      TRUST_FORWARDED_HEADERS: ${TRUST_FORWARDED_HEADERS:-false}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}

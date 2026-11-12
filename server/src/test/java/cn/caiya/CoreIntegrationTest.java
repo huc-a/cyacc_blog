@@ -1,5 +1,7 @@
 package cn.caiya;
 
+import cn.caiya.content.ContentQuery;
+
 import cn.caiya.common.ApiException;
 import cn.caiya.content.*;
 import cn.caiya.system.AuditService;
@@ -50,17 +52,20 @@ class CoreIntegrationTest extends DatabaseTestSupport {
     void draftIsolationAndPublishSwitchAndHistory() throws Exception {
         String slug=slug();var draft=create(slug);long id=n(draft,"id");
         mvc.perform(get("/api/public/contents/"+slug)).andExpect(status().isNotFound());
-        assertThat(service.list(true,"article","all",slug,1,10).get("total")).isEqualTo(0L);
+        assertThat(service.list(new ContentQuery(true,"article","all",slug,null,null,null,false,1,10)).get("total")).isEqualTo(0L);
         var published=service.publish(id,0);long oldRevision=n(published,"revisionId");
         var changed=service.save(id,input(slug,"独特新标题-"+slug,"新正文",n(published,"lockVersion")));
-        assertThat(service.publicDetail(slug).get("title")).isEqualTo("原始标题");
-        assertThat(service.publicDetail(slug).get("bodyMarkdown")).isEqualTo("# 原始正文");
-        assertThat(service.list(true,"article","all","独特新标题-"+slug,1,10).get("total")).isEqualTo(0L);
+        assertThat(service.publicDetail(slug).title()).isEqualTo("原始标题");
+        assertThat(service.publicDetail(slug).bodyMarkdown()).isEqualTo("# 原始正文");
+        assertThat(service.list(new ContentQuery(true,"article","all","独特新标题-"+slug,null,null,null,false,1,10)).get("total")).isEqualTo(0L);
         assertThat(n(changed,"revisionId")).isNotEqualTo(oldRevision);
         assertThat(service.history(id)).hasSize(2);
         service.publish(id,n(changed,"lockVersion"));
-        assertThat(service.publicDetail(slug).get("title")).isEqualTo("独特新标题-"+slug);
-        assertThat(service.publicDetail(slug)).doesNotContainKeys("lockVersion","workingRevisionId","deletedAt");
+        assertThat(service.publicDetail(slug).title()).isEqualTo("独特新标题-"+slug);
+        // The public detail is a whitelisted record now: private bookkeeping
+        // fields are absent by construction, not deleted after the fact.
+        var publicFields=java.util.Arrays.stream(service.publicDetail(slug).getClass().getRecordComponents()).map(c->c.getName()).toList();
+        assertThat(publicFields).doesNotContain("lockVersion","workingRevisionId","deletedAt");
         assertThat(mapper.body(oldRevision)).isEqualTo("# 原始正文");
     }
 

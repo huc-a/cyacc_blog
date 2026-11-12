@@ -17,12 +17,20 @@ public class MediaController {
     }
     @PostMapping("/api/admin/media") public Map<String,Object> upload(@RequestParam MultipartFile file) {return service.upload(file);}
     @DeleteMapping("/api/admin/media/{id}") public void delete(@PathVariable long id) {service.delete(id);}
-    @GetMapping("/api/public/media/{id}") public ResponseEntity<?> publicFile(@PathVariable long id) {
-        if(!mapper.isPublic(id)) throw new ApiException(404,"图片不存在");return file(id);
+    @GetMapping("/api/public/media/{id}") public ResponseEntity<?> publicFile(@PathVariable long id,@RequestParam(defaultValue="original") String variant) {
+        if(!mapper.isPublic(id)) throw new ApiException(404,"图片不存在");
+        // Storage names are UUIDs and file content never changes: cache forever.
+        return file(id,CacheControl.maxAge(365,java.util.concurrent.TimeUnit.DAYS).cachePublic().immutable(),variant);
     }
-    @GetMapping("/api/admin/media/{id}/file") public ResponseEntity<?> file(@PathVariable long id) {
-        var row=mapper.find(id);if(row==null) throw new ApiException(404,"图片不存在");var resource=new FileSystemResource(service.path(row));
+    @GetMapping("/api/admin/media/{id}/file") public ResponseEntity<?> file(@PathVariable long id,@RequestParam(defaultValue="original") String variant) {
+        return file(id,CacheControl.noStore(),variant);
+    }
+    private ResponseEntity<?> file(long id,CacheControl cacheControl,String variant) {
+        var row=mapper.find(id);if(row==null) throw new ApiException(404,"图片不存在");
+        // variant=display serves the downscaled copy when one exists.
+        java.nio.file.Path path="display".equals(variant)&&service.displayPath(row)!=null?service.displayPath(row):service.path(row);
+        var resource=new FileSystemResource(path);
         if(!resource.exists()) throw new ApiException(404,"图片文件不存在");
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.get("mime_type").toString())).cacheControl(CacheControl.noStore()).body(resource);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.get("mime_type").toString())).cacheControl(cacheControl).body(resource);
     }
 }
