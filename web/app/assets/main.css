@@ -7,3 +7,23 @@
 @media(max-width:850px){.wrap{width:calc(100% - 36px)}.home-grid{grid-template-columns:1fr}.left-sidebar{display:none}.hero{padding:65px 4px 38px;min-height:310px}.hero-note{display:none}.nav-shell{padding:12px 18px;gap:15px}.brand{font-size:18px}.brand-mark{display:none}.desktop-only{display:none}.desktop-nav{gap:14px;font-size:12px}.nav-tools{font-size:11px}.read-grid{grid-template-columns:1fr;max-width:800px}.reader-sidebar{display:none}.collection-toolbar{flex-wrap:wrap}.inline-search{width:100%}.inline-search input{flex:1}.site-footer{flex-wrap:wrap}.collection{padding-top:55px}}
 @media(max-width:570px){.wrap{width:calc(100% - 26px)}.nav-shell{width:calc(100% - 24px);top:10px;transform:translateY(10px);padding:12px 15px;min-height:64px}.brand{font-size:18px}.brand small{font-size:7px}.desktop-nav{display:none}.mobile-menu{display:block;padding:4px 7px;border:0;background:none;font-size:17px}.mobile-nav{display:grid;grid-template-columns:repeat(4,1fr);position:absolute;top:calc(100% + 8px);left:0;right:0;background:#f8f5eaf7;border:1px solid #fff;border-radius:13px;padding:15px;gap:8px;box-shadow:0 14px 35px #263d3222}.mobile-nav a{padding:7px;text-align:center}.hero{padding:48px 5px 32px;min-height:290px}.hero h1{font-size:35px;margin:15px 0}.hero p{font-size:12px;max-width:300px}.hero-caption{font-size:9px}.announcement{padding:12px 14px;font-size:11px}.filter-pills{gap:6px}.filter-pills button{font-size:10px;padding:6px 11px}.card-inner{padding:23px}.content-card h2{font-size:23px}.content-card p{font-size:16px}.card-meta{font-size:9px;gap:12px}.collection-grid{grid-template-columns:1fr}.collection-hero{padding-bottom:23px}.collection-hero h1{font-size:30px}.collection-hero p{font-size:12px}.collection-toolbar{padding:14px}.search-page{padding-top:50px}.search-form{gap:8px;padding:13px}.search-form input{font-size:14px;width:50%}.search-form button{font-size:12px}.reading{padding-top:40px}.breadcrumb{font-size:10px;gap:8px}.reading-paper{padding:30px 23px}.article-header h1{font-size:29px}.article-meta{font-size:10px;gap:11px}.article-summary{font-size:16px}.prose{font-size:min(var(--reading-size),23px)}.reading-tools{gap:5px}.reading-tools button{font-size:9px}.about-page{margin-top:55px}.about-page h1{font-size:30px}.site-footer{padding-top:32px;font-size:9px}.empty-state h2{font-size:22px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}@supports not (backdrop-filter:blur(1px)){.glass,.reading-paper{background:#f8f5e9}}
+
+/* ===== 首页最新文章轮播 ===== */
+.home-carousel{position:relative;overflow:hidden;border-radius:22px;min-height:340px;margin:26px 0 8px}
+.carousel-slide{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .8s ease}
+.carousel-slide.active{opacity:1;pointer-events:auto}
+.carousel-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.carousel-shade{position:absolute;inset:0;background:linear-gradient(78deg,rgba(24,30,20,.72) 22%,rgba(24,30,20,.28) 58%,rgba(24,30,20,.05))}
+.carousel-copy{position:relative;z-index:2;max-width:600px;padding:44px 48px;color:#f4f6ee}
+.carousel-badge{display:inline-block;font-size:11px;letter-spacing:.12em;padding:5px 11px;border:1px solid rgba(255,255,255,.45);border-radius:999px;background:rgba(255,255,255,.12)}
+.carousel-copy h2{font:500 34px/1.5 var(--serif-font);margin:18px 0 10px}
+.carousel-copy h2 a{color:#fff}
+.carousel-copy p{font-size:14px;line-height:1.9;color:#e3e9d8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0 0 14px}
+.carousel-copy time{font-size:12px;color:#c3cfb2}
+.carousel-controls{position:absolute;z-index:3;right:22px;bottom:18px;display:flex;align-items:center;gap:12px}
+.carousel-controls>button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(20,26,17,.35);color:#fff;font-size:19px;line-height:1;cursor:pointer}
+.carousel-controls>button:hover{background:rgba(20,26,17,.6)}
+.carousel-dots{display:flex;gap:7px}
+.carousel-dots button{width:8px;height:8px;padding:0;border-radius:999px;border:0;background:rgba(255,255,255,.45);cursor:pointer;transition:all .3s}
+.carousel-dots button.active{width:22px;background:#fff}
+@media(max-width:760px){.home-carousel{min-height:300px}.carousel-copy{padding:30px 24px}.carousel-copy h2{font-size:26px}.carousel-controls{right:14px;bottom:12px}}

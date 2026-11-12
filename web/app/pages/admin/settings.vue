@@ -9,17 +9,62 @@ const uploadingWallpaper = ref(false), uploadingDefaultCover = ref(false)
 const siteDirty = computed(() => snapshot.value !== JSON.stringify(settings.value))
 const dirty = computed(() => siteDirty.value || uploadingWallpaper.value || uploadingDefaultCover.value)
 useUnsavedChanges(dirty)
-async function save() { busy.value = true; try { const result = await api<typeof loaded>('/api/admin/site', { method: 'PUT', body: { settings: settings.value, lockVersion: version.value } }); version.value = result.lockVersion; snapshot.value = JSON.stringify(settings.value); await refreshNuxtData('site-settings'); message.success('网站信息已保存') } catch (e) { message.error(errorText(e)) } finally { busy.value = false } }
-
-
+async function save() {
+  busy.value = true
+  try {
+    const result = await api<typeof loaded>('/api/admin/site', { method: 'PUT', body: { settings: settings.value, lockVersion: version.value } })
+    version.value = result.lockVersion; snapshot.value = JSON.stringify(settings.value)
+    await refreshNuxtData('site-settings'); message.success('系统设置已保存')
+  } catch (e) { message.error(errorText(e)) } finally { busy.value = false }
+}
 async function exportContents() {
   busy.value = true
   try {
     const items: Content[] = []
-    for (const status of ['all', 'trash']) { let page = 1, total = 0; do { const result = await api<Page<Content>>(`/api/admin/contents?status=${status}&page=${page}&size=50`); total = result.total; for (const item of result.items) items.push(await api(`/api/admin/contents/${item.id}`)); page++ } while ((page - 1) * 50 < total) }
+    for (const status of ['all', 'trash']) {
+      let page = 1, total = 0
+      do {
+        const result = await api<Page<Content>>(`/api/admin/contents?status=${status}&page=${page}&size=50`)
+        total = result.total
+        for (const item of result.items) items.push(await api(`/api/admin/contents/${item.id}`))
+        page++
+      } while ((page - 1) * 50 < total)
+    }
     const payload = { exportedAt: new Date().toISOString(), format: 'caiya-content-export-v1', note: 'Current working revisions only; media binaries and frozen history require a full database and media backup.', site: (await api<typeof loaded>('/api/admin/site')).settings, taxonomy: await api('/api/admin/taxonomy'), contents: items }
-    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `caiya-content-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); message.success('内容导出已开始下载')
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }))
+    const link = document.createElement('a'); link.href = url; link.download = `caiya-content-${new Date().toISOString().slice(0, 10)}.json`; link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000); message.success('内容导出已开始下载')
   } catch (e) { message.error(errorText(e)) } finally { busy.value = false }
 }
 </script>
-<template><div><AdminPageHead title="系统设置" subtitle="把网站的名字、介绍和日常管理整理在这里。"><button class="primary" :disabled="busy || uploadingWallpaper || uploadingDefaultCover || !siteDirty" @click="save">保存网站设置</button></AdminPageHead><div class="settings-grid"><section class="studio-panel"><h2>网站信息</h2><div class="field"><label for="site-name">站点名称</label><input id="site-name" v-model="settings.name" maxlength="80"></div><div class="field"><label for="site-description">站点描述</label><textarea id="site-description" v-model="settings.description" maxlength="300" rows="3" /></div><div class="two-fields"><div class="field"><label for="site-author">作者名称</label><input id="site-author" v-model="settings.author" maxlength="80"></div><div class="field"><label for="site-email">联系邮箱</label><input id="site-email" v-model="settings.email" type="email" maxlength="254"></div></div><div class="field"><label for="site-bio">关于我</label><textarea id="site-bio" v-model="settings.bio" maxlength="500" rows="4" /></div><div class="field"><label for="site-github">GitHub 地址</label><input id="site-github" v-model="settings.github" type="url" placeholder="https://github.com/…"></div><div class="field"><label for="site-footer">页脚文案</label><input id="site-footer" v-model="settings.footer" maxlength="300"></div><div class="field"><label for="site-icp">ICP 备案号</label><input id="site-icp" v-model="settings.icpNumber" maxlength="80" placeholder="如：桂ICP备2026024037号"><p class="admin-footnote">填写后显示在页脚，并链接到工信部备案查询。</p></div><div class="field"><label for="site-police">公安备案号</label><input id="site-police" v-model="settings.policeNumber" maxlength="80" placeholder="暂未取得，留空显示办理中"><p class="admin-footnote">未填写时，前台显示“公安备案办理中”。取得后填写完整号码（地区简称 + 公网安备 + 14 位数字 + 号），将链接到公安机关备案查询。</p></div><div class="settings-divider" /><h2>登录页壁纸</h2><SiteImageControl v-model="settings.loginBackgroundAssetId" v-model:busy="uploadingWallpaper" kind="wallpaper" label="登录页壁纸" save-hint="保存网站设置后生效" /><p class="admin-footnote">未选择时沿用博客壁纸；选择后点击顶部“保存网站设置”。登录页对所有访客可见。</p><div class="settings-divider" /><h2>&#40664;&#35748;&#25991;&#31456;&#23553;&#38754;</h2><SiteImageControl v-model="settings.defaultCoverAssetId" v-model:busy="uploadingDefaultCover" kind="cover" label="&#40664;&#35748;&#25991;&#31456;&#23553;&#38754;" save-hint="&#20445;&#23384;&#32593;&#31449;&#35774;&#32622;&#21518;&#24212;&#29992;&#20110;&#26410;&#21333;&#29420;&#35774;&#32622;&#23553;&#38754;&#30340;&#20869;&#23481;" /><p class="admin-footnote">&#20869;&#23481;&#26410;&#35774;&#32622;&#23553;&#38754;&#26102;&#20250;&#20351;&#29992;&#36825;&#24352;&#22270;&#29255;&#12290;</p><div class="settings-divider" /><h2>数据导出与备份</h2><p class="admin-footnote">导出当前工作版本、标签和网站设置，便于整理内容。图片文件和历史版本需要随数据库一起备份。</p><button :disabled="busy" @click="exportContents">导出内容 JSON</button><div class="help-note">完整备份与恢复：使用项目提供的备份脚本，同时保存数据库与上传目录。恢复前先在隔离环境验证。</div></section><aside class="settings-stack"><section class="studio-panel"><h2>站点管理</h2><NuxtLink to="/admin/appearance" class="text-link">外观与阅读设置 →</NuxtLink><NuxtLink to="/admin/analytics" class="text-link">统计连接与访问数据 →</NuxtLink><NuxtLink to="/admin/logs" class="text-link">查看操作日志 →</NuxtLink></section></aside></div></div></template>
+<template>
+  <div>
+    <AdminPageHead title="系统设置" subtitle="登录页壁纸、默认封面和数据导出。站点名称、作者介绍在「网站信息」里维护。">
+      <button class="primary" :disabled="busy || uploadingWallpaper || uploadingDefaultCover || !siteDirty" @click="save">保存设置</button>
+    </AdminPageHead>
+    <div class="settings-grid">
+      <section class="studio-panel">
+        <h2>登录页壁纸</h2>
+        <SiteImageControl v-model="settings.loginBackgroundAssetId" v-model:busy="uploadingWallpaper" kind="wallpaper" label="登录页壁纸" save-hint="保存设置后生效" />
+        <p class="admin-footnote">未选择时沿用博客背景；登录页对所有访客可见。</p>
+        <div class="settings-divider" />
+        <h2>默认文章封面</h2>
+        <SiteImageControl v-model="settings.defaultCoverAssetId" v-model:busy="uploadingDefaultCover" kind="cover" label="默认文章封面" save-hint="保存设置后应用于未单独设置封面的内容" />
+        <p class="admin-footnote">内容未设置封面时会使用这张图片。</p>
+        <div class="settings-divider" />
+        <h2>数据导出与备份</h2>
+        <p class="admin-footnote">导出当前工作版本、标签和网站设置，便于整理内容。文章也可以在「文章管理」里用 Markdown 批量导入。图片文件和历史版本需要随数据库一起备份。</p>
+        <button :disabled="busy" @click="exportContents">导出内容 JSON</button>
+        <div class="help-note">完整备份与恢复：使用项目提供的备份脚本，同时保存数据库与上传目录。恢复前先在隔离环境验证。</div>
+      </section>
+      <aside class="settings-stack">
+        <section class="studio-panel">
+          <h2>相关入口</h2>
+          <NuxtLink to="/admin/site-info" class="text-link">网站信息（名称 / 头像 / 备案）→</NuxtLink>
+          <NuxtLink to="/admin/appearance" class="text-link">外观与背景 →</NuxtLink>
+          <NuxtLink to="/admin/logs" class="text-link">查看操作日志 →</NuxtLink>
+        </section>
+      </aside>
+    </div>
+  </div>
+</template>

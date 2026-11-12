@@ -1,5 +1,6 @@
 package cn.caiya.content;
 
+import cn.caiya.common.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.util.*;
@@ -60,6 +61,36 @@ public class ContentController {
   @PostMapping("/api/admin/contents")
   public Map<String, Object> create(@Valid @RequestBody ContentInput input) {
     return service.create(input);
+  }
+
+  /**
+   * Batch-imports Markdown files as draft articles. Each file is imported in its own transaction;
+   * per-file failures are reported, not fatal.
+   */
+  @PostMapping("/api/admin/contents/import")
+  public Map<String, Object> importMarkdown(
+      @RequestParam("files") List<org.springframework.web.multipart.MultipartFile> files) {
+    if (files.isEmpty() || files.size() > 20) throw new ApiException(400, "一次导入 1–20 个文件");
+    var items = new ArrayList<Map<String, Object>>();
+    var failed = new ArrayList<Map<String, Object>>();
+    for (var file : files) {
+      String name = file.getOriginalFilename() == null ? "未命名" : file.getOriginalFilename();
+      try {
+        if (!name.toLowerCase().matches(".*\\.(md|markdown)$"))
+          throw new ApiException(400, "只支持 .md 文件");
+        var created = service.importMarkdown(name, file.getBytes());
+        items.add(
+            Map.of(
+                "id", created.get("id"),
+                "title", created.get("title"),
+                "slug", created.get("slug")));
+      } catch (ApiException e) {
+        failed.add(Map.of("file", name, "reason", e.getMessage()));
+      } catch (java.io.IOException e) {
+        failed.add(Map.of("file", name, "reason", "文件读取失败"));
+      }
+    }
+    return Map.of("created", items.size(), "items", items, "failed", failed);
   }
 
   @PutMapping("/api/admin/contents/{id}")

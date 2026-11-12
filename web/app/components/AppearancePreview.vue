@@ -1,6 +1,0 @@
-<script setup lang="ts">
-import type { SiteSettings } from '~/types'
-import { themeStyle } from '~/utils/site'
-defineProps<{ settings: SiteSettings; mode: 'home' | 'article'; mobile: boolean }>()
-</script>
-<template><div class="appearance-frame" :class="{ mobile }" :style="themeStyle(settings, true)"><div class="preview-site"><div class="glass preview-nav" :style="{ background: `rgba(250,247,235,${settings.navTopOpacity})` }"><strong>{{ settings.name }}</strong><span>首页　文章　作品　教程</span></div><template v-if="mode === 'home'"><header class="preview-hero"><span class="eyebrow">NOTES, CODE & EVERYDAY LIFE</span><h1>{{ settings.headline }}</h1><p>{{ settings.subtitle }}</p></header><div class="preview-columns"><ProfileCard class="preview-profile" :site="settings" preview /><article class="glass preview-post"><span class="eyebrow">DESIGN NOTES / 外观预览</span><h2>给想法一个安静的地方</h2><p>从文字、背景与适当的留白开始，让博客成为一个愿意长久停留的地方。</p><span>继续阅读 →</span></article></div></template><article v-else class="preview-paper"><span class="eyebrow">DESIGN NOTES / 外观预览</span><h1>给想法一个<br>安静的地方</h1><p>最初想做个人博客，是因为很多想法散落在不同的地方。把它们收集起来，放在一个不那么匆忙的地方。</p><h2>让文字拥有自己的节奏</h2><p>风景安静地留在卡片边缘。进入长文之后，纸面的底色会变厚，让每段阅读都有一个安稳的位置。</p><blockquote>风景在文字背后，阅读始终在画面中央。</blockquote></article><p class="preview-footer">{{ settings.footer }} · 样式预览</p></div></div></template>

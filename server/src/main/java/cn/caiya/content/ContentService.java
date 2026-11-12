@@ -14,16 +14,19 @@ public class ContentService {
   private final AuditService audit;
   private final DetailService details;
   private final cn.caiya.site.SiteService site;
+  private final TaxonomyMapper taxonomyMapper;
 
   public ContentService(
       ContentMapper mapper,
       AuditService audit,
       DetailService details,
-      cn.caiya.site.SiteService site) {
+      cn.caiya.site.SiteService site,
+      TaxonomyMapper taxonomyMapper) {
     this.mapper = mapper;
     this.audit = audit;
     this.details = details;
     this.site = site;
+    this.taxonomyMapper = taxonomyMapper;
   }
 
   public static void type(String type) {
@@ -172,15 +175,127 @@ public class ContentService {
   public Map<String, Object> create(ContentInput input) {
     type(input.type());
     details.validate(input);
+    boolean autoSlug = input.slug() == null || input.slug().isBlank();
     var c = new HashMap<String, Object>();
     c.put("type", input.type());
-    c.put("slug", input.slug());
+    // A throwaway unique slug satisfies NOT NULL/UNIQUE until the row id
+    // exists; the visible slug is then assigned numerically below.
+    c.put("slug", autoSlug ? "auto-" + java.util.UUID.randomUUID() : input.slug());
     mapper.insert(c);
     long id = number(c, "id");
+    if (autoSlug) mapper.updateSlug(id, nextNumericSlug(id));
     long rid = makeRevision(id, input, 1);
     mapper.working(id, rid);
     audit.record("content.create", input.type(), id);
     return detail(id, false);
+  }
+
+  /** Next free numeric slug, starting from the content's own id and counting up. */
+  private String nextNumericSlug(long id) {
+    long candidate = id;
+    while (mapper.slugCount(Long.toString(candidate), id) > 0) candidate++;
+    return Long.toString(candidate);
+  }
+
+  /**
+   * Imports one Markdown file as a draft article. Supports a small YAML front-matter subset (title,
+   * tags); the title falls back to the first level-1 heading, then to the file name. Unknown tag
+   * names are created.
+   */
+  @Transactional
+  public Map<String, Object> importMarkdown(String filename, byte[] bytes) {
+    if (bytes.length > 1024 * 1024) throw new ApiException(400, "文件超过 1 MB");
+    String text =
+        new String(bytes, java.nio.charset.StandardCharsets.UTF_8).replaceFirst("^\uFEFF", "");
+    String title = null;
+    List<String> tagNames = List.of();
+    String body = text;
+    if (text.startsWith("---")) {
+      int end = text.indexOf("\n---", 3);
+      if (end > 0) {
+        String front = text.substring(3, end);
+        body = text.substring(end + 4).stripLeading();
+        var parsedTags = new ArrayList<String>();
+        for (String line : front.split("\n")) {
+          String trimmed = line.trim();
+          if (trimmed.startsWith("title:")) title = unquote(trimmed.substring(6).trim());
+          if (trimmed.startsWith("tags:")) {
+            String raw = trimmed.substring(5).trim().replaceAll("^\\[|\\]$", "");
+            for (String name : raw.split(",")) {
+              String n = unquote(name.trim());
+              if (!n.isEmpty() && n.length() <= 60) parsedTags.add(n);
+            }
+          }
+        }
+        tagNames = parsedTags;
+      }
+    }
+    if (title == null || title.isBlank()) {
+      for (String line : body.split("\n")) {
+        if (line.startsWith("# ")) {
+          title = line.substring(2).trim();
+          break;
+        }
+      }
+    }
+    if (title == null || title.isBlank()) {
+      title = filename.replaceFirst("(?i)\\.(md|markdown)$", "").trim();
+    }
+    if (title.isBlank() || title.length() > 200) throw new ApiException(400, "无法确定文章标题或标题过长");
+    String summary = "";
+    for (String line : body.split("\n")) {
+      String trimmed = line.trim();
+      if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+        summary = trimmed.length() > 200 ? trimmed.substring(0, 200) : trimmed;
+        break;
+      }
+    }
+    var tagIds = new ArrayList<Long>();
+    for (String name : tagNames) tagIds.add(ensureTag(name));
+    var input =
+        new ContentInput(
+            "article",
+            null,
+            title,
+            summary,
+            body,
+            0L,
+            "Markdown 导入",
+            tagIds,
+            null,
+            null,
+            List.of(),
+            ContentDetails.defaults());
+    var created = create(input);
+    audit.record("content.import", "article", number(created, "id"));
+    return created;
+  }
+
+  private static String unquote(String value) {
+    if (value.length() >= 2
+        && ((value.startsWith("\"") && value.endsWith("\""))
+            || (value.startsWith("'") && value.endsWith("'")))) {
+      return value.substring(1, value.length() - 1);
+    }
+    return value;
+  }
+
+  /** Finds a tag by exact name or creates it with an automatic numeric slug. */
+  private long ensureTag(String name) {
+    var existing = taxonomyMapper.findTagByName(name);
+    if (existing != null) return Views.number(existing, "id");
+    var v = new HashMap<String, Object>();
+    v.put("name", name);
+    v.put("slug", "auto-" + java.util.UUID.randomUUID());
+    taxonomyMapper.createTag(v);
+    long id = Views.number(v, "id");
+    long candidate = id;
+    while (taxonomyMapper.tagSlugCount(Long.toString(candidate), id) > 0) candidate++;
+    var update = new HashMap<String, Object>();
+    update.put("id", id);
+    update.put("slug", Long.toString(candidate));
+    taxonomyMapper.updateTagSlug(update);
+    return id;
   }
 
   private long makeRevision(long id, ContentInput input, int no) {

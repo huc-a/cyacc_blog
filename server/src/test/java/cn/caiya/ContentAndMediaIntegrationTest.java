@@ -570,6 +570,73 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
   }
 
   @Test
+  void blankSlugGetsNextNumericSlug() {
+    var first = contents.create(input("article", null, "自动地址一", 0, ContentDetails.defaults()));
+    var second = contents.create(input("article", null, "自动地址二", 0, ContentDetails.defaults()));
+    String firstSlug = (String) first.get("slug"), secondSlug = (String) second.get("slug");
+    assertThat(firstSlug).matches("[0-9]+");
+    assertThat(secondSlug).matches("[0-9]+");
+    assertThat(Long.parseLong(secondSlug)).isGreaterThan(Long.parseLong(firstSlug));
+  }
+
+  @Test
+  void taxonomyCreateWithoutSlugAssignsNumericSlugAndPages() throws Exception {
+    String name = "分页标签" + slug();
+    var created =
+        json.readValue(
+            mvc.perform(
+                    post("/api/admin/taxonomy/tags")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(Map.of("name", name))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            Map.class);
+    assertThat((String) created.get("slug")).matches("[0-9]+");
+    var page =
+        json.readValue(
+            mvc.perform(get("/api/admin/taxonomy/tags/paged").param("q", name))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            Map.class);
+    assertThat(((Number) page.get("total")).longValue()).isEqualTo(1L);
+    assertThat((List<?>) page.get("items")).hasSize(1);
+  }
+
+  @Test
+  void markdownImportCreatesDraftArticleWithFrontMatter() throws Exception {
+    String md = "---\ntitle: 导入的文章\ntags: [生活, 导入测试]\n---\n# 导入的文章\n\n这是导入的正文第一段。\n";
+    var result =
+        json.readValue(
+            mvc.perform(
+                    multipart("/api/admin/contents/import")
+                        .file(
+                            new MockMultipartFile(
+                                "files",
+                                "imported.md",
+                                "text/markdown",
+                                md.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            Map.class);
+    assertThat(((Number) result.get("created")).intValue()).isEqualTo(1);
+    assertThat((List<?>) result.get("failed")).isEmpty();
+    @SuppressWarnings("unchecked")
+    var item = (Map<String, Object>) ((List<?>) result.get("items")).get(0);
+    assertThat(item.get("title")).isEqualTo("导入的文章");
+    assertThat((String) item.get("slug")).matches("[0-9]+");
+    var stored = contents.detail(((Number) item.get("id")).longValue(), false);
+    assertThat(stored.get("publishStatus")).isEqualTo("draft");
+    assertThat((String) stored.get("bodyMarkdown")).contains("这是导入的正文第一段");
+  }
+
   void identicalUploadIsDeduplicatedByContentHash() throws Exception {
     byte[] bytes = png();
     var first = media.upload(new MockMultipartFile("file", "dup.png", "image/png", bytes));

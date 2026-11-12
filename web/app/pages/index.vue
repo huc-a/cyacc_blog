@@ -9,6 +9,8 @@ const { data: summary } = await useFetch<{ counts: { contents: number; tags: num
 const query = computed(() => ({ home: true, type: String(route.query.type || ''), tagId: route.query.tagId, date: route.query.date, page: Number(route.query.page || 1), size: 6 }))
 const { data, status, error, refresh } = await useFetch<Page<Content>>('/api/public/contents', { query, key: 'home-contents' })
 const { data: recent } = await useFetch<Page<Content>>('/api/public/contents', { query: { size: 3 }, key: 'recent-publications' })
+const { data: latest } = await useFetch<Page<Content>>('/api/public/contents', { query: { size: 5 }, key: 'home-latest' })
+const showCarousel = computed(() => !route.query.type && !route.query.tagId && !route.query.date)
 const tags = computed(() => taxonomy.value?.tags.filter(t => t.count).slice(0, 18) || [])
 const filtered = computed(() => !!(route.query.tagId || route.query.date))
 function filter(key: string, value?: string | number) { navigateTo({ path: '/', query: { ...route.query, [key]: value || undefined, ...(key === 'page' ? {} : { page: undefined }) } }) }
@@ -17,6 +19,7 @@ useSeoMeta({ title: '首页' })
 <template>
   <div class="wrap">
     <section class="hero"><div><span class="eyebrow">NOTES, CODE & EVERYDAY LIFE</span><h1>{{ site.headline }}</h1><p>{{ site.subtitle }}</p><div class="hero-caption"><span class="tiny-dot" /> 在代码与生活之间，给想法留一个位置。</div></div></section>
+    <HomeCarousel v-if="showCarousel" :items="latest?.items || []" :site="site" />
     <div class="home-grid">
       <aside class="sidebar-stack left-sidebar"><ProfileCard :site="site" />
         <section class="glass panel"><h2 class="section-title"><span class="tiny-dot" /> &#25353;&#26639;&#30446;&#27983;&#35272;</h2><button class="category-item" :class="{ selected: !query.type }" @click="filter('type')">&#20840;&#37096;&#35760;&#24405; <small>{{ summary?.counts.contents ?? 0 }}</small></button><button v-for="section in sections" :key="section.type" class="category-item" :class="{ selected: query.type === section.type }" @click="filter('type', section.type)">{{ section.label }}<small>&#27983;&#35272;</small></button></section>

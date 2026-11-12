@@ -18,6 +18,12 @@ public interface ContentMapper {
   @Options(useGeneratedKeys = true, keyProperty = "id")
   void insert(Map<String, Object> values);
 
+  @Select("SELECT count(*) FROM content WHERE slug=#{slug} AND id<>#{excludeId}")
+  long slugCount(@Param("slug") String slug, @Param("excludeId") long excludeId);
+
+  @Update("UPDATE content SET slug=#{slug} WHERE id=#{id}")
+  void updateSlug(@Param("id") long id, @Param("slug") String slug);
+
   @Insert(
       "INSERT INTO"
           + " content_revision(content_id,content_type,revision_no,title,summary,change_note,category_id)"

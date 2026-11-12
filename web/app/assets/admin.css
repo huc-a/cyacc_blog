@@ -22,3 +22,69 @@
 .login-screen{position:relative}.login-screen .landscape{position:fixed}
 .admin-nav{scrollbar-width:none}
 .admin-nav::-webkit-scrollbar{display:none}
+
+/* ===== 2026 后台改版：深色侧栏 + 纸面内容区 + 更清晰的层级 ===== */
+.admin-shell{font-size:13px;color:#3c453d}
+.admin-veil{background:#f3f3ee}
+.admin-sidebar{background:#22281f;color:#d7ddd2;border-radius:18px;box-shadow:0 18px 45px rgba(29,36,26,.28);padding:26px 16px 16px}
+.admin-sidebar .brand{color:#f2f4ec;padding-bottom:24px}
+.admin-sidebar .brand small{color:#8e9a86;font-size:8px}
+.admin-sidebar .brand-mark{background:#5c7a48;color:#fff;border-radius:10px;box-shadow:none}
+.admin-nav>a{color:#aeb9a6;font-size:13px;padding:11px 14px;border-radius:10px;margin:2px 0}
+.admin-nav>a:hover{background:rgba(255,255,255,.07);color:#eef2e6}
+.admin-nav>a.router-link-active{background:#5c7a48;color:#fff;font-weight:600}
+.admin-nav>a.router-link-active:hover{background:#5c7a48}
+.nav-group{color:#77836e;font-size:9px;letter-spacing:.14em;padding:22px 14px 7px}
+.sidebar-account{border-top:1px solid rgba(255,255,255,.11)}
+.sidebar-account strong{color:#eef2e6;font-size:12px}
+.sidebar-account small{color:#8e9a86;font-size:9px}
+.sidebar-account button{color:#aeb9a6}
+.account-avatar{background:#39432f;color:#dfe8ce;border-color:rgba(255,255,255,.16)}
+.admin-topbar{border-bottom:1px solid #e3e5da;font-size:11px;color:#6a7263;height:72px}
+.admin-topbar .admin-top-tools{color:#68755c}
+.admin-page-head h1{color:#2c3628;font-size:29px}
+.admin-page-head p{color:#7d8474;font-size:12px}
+.admin-page-head .eyebrow{color:#93a184}
+.admin-shell button,.admin-shell .button,.button{background:#fff;border:1px solid #dde0d2;color:#4c5c40;border-radius:9px;font-size:12px;transition:border-color .15s,background .15s}
+.admin-shell button:hover,.button:hover{border-color:#b7c3a2}
+.admin-shell .primary{background:#54703f;border-color:#54703f;color:#fff}
+.admin-shell .primary:hover{background:#476335;border-color:#476335}
+.studio-panel{background:#fff;border:1px solid #e7e8de;border-radius:16px;box-shadow:0 6px 24px rgba(60,74,44,.05)}
+.studio-panel h2{color:#33402c;font-size:15px}
+.metric-card{background:#fff;border:1px solid #e7e8de;border-radius:16px}
+.metric-card>strong{color:#3c5530}
+.metric-card>span{color:#7f8a72}
+.admin-tabs>button.active{color:#476335;box-shadow:inset 0 -2px #54703f}
+.admin-table th{background:#f4f6ef;color:#7c8770;font-size:10px;letter-spacing:.04em}
+.admin-table td{font-size:12px;color:#5d685c;border-bottom:1px solid #eef0e6}
+.admin-table td small{font-size:9px;color:#9aa78c}
+.title-cell>a,.title-cell>span{color:#39512a;font-size:13px}
+.admin-table input[type=checkbox]{accent-color:#54703f}
+.state-badge{background:#eef0e6;color:#7e8a6e}
+.state-badge.published{background:#e3eed3;color:#5c7a3e}
+.state-badge.draft{background:#f6ecd2;color:#a08740}
+.field>label,.field-label{color:#5f6d55;font-size:12px}
+.field>small{font-size:10px;color:#97a487}
+.field input,.field textarea,.field select{background:#fff;border:1px solid #dde0d2;border-radius:9px}
+.help-note{background:#f2f6ea;border-color:#dde6cb;color:#74855f}
+.bulk-actions{background:#eef3e2}
+.editor-topbar{background:rgba(255,255,255,.94);border-color:#e7e8de;box-shadow:0 6px 22px rgba(60,74,44,.06)}
+.editor-back{background:#fff;border-color:#dde0d2}
+.editor-heading strong{color:#33402a}
+.editor-paper .editor-title{color:#33402a}
+.editor-paper .editor-summary{color:#7f8c6f}
+.editor-body{color:#4c5a45}
+.draft-row strong{color:#47603a}
+.draft-icon{background:#eef3e2;border-color:#dde6cb;color:#7d9a5e}
+.media-upload{background:#f5f7ee;border-color:#b9c7a4}
+.admin-footer{color:#98a487}
+.admin-shell ::selection{background:#d9e4c6}
+.profile-hero{display:flex;gap:22px;align-items:center}
+.profile-hero .account-avatar{width:76px;height:76px;font-size:30px}
+.profile-hero h2{margin:0 0 6px}
+.profile-hero p{margin:0;color:#85917a;font-size:12px;line-height:1.9}
+.import-drop{border:1.5px dashed #b9c7a4;border-radius:12px;padding:26px;text-align:center;color:#74855f;font-size:12px;line-height:2;background:#f7f9f1;cursor:pointer}
+.import-drop:hover{border-color:#54703f}
+.import-result{margin-top:16px;font-size:12px;line-height:2}
+.import-result .fail{color:#a66b65}
+@media(max-width:760px){.admin-sidebar{background:#22281ff7}.profile-hero{flex-direction:column;text-align:center}}

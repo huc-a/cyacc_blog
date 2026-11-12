@@ -1,18 +1,37 @@
 <script setup lang="ts">
 import type { SiteSettings } from '~/types'
-import { defaultSite } from '~/utils/site'
 import { useMessage } from 'naive-ui'
-definePageMeta({ layout: 'admin' }); useSeoMeta({ title: '外观设置' })
+definePageMeta({ layout: 'admin' }); useSeoMeta({ title: '外观' })
 const api = useApi(), message = useMessage()
 const loaded = await api<{ settings: SiteSettings; lockVersion: number }>('/api/admin/site')
 const settings = ref<SiteSettings>(loaded.settings), version = ref(loaded.lockVersion), snapshot = ref(JSON.stringify(loaded.settings))
-const dirty = computed(() => snapshot.value !== JSON.stringify(settings.value)), busy = ref(false), mode = ref<'home' | 'article'>('home'), mobile = ref(false)
+const dirty = computed(() => snapshot.value !== JSON.stringify(settings.value)), busy = ref(false)
 useUnsavedChanges(dirty)
-const controls = [{ key: 'glassOpacity', label: '卡片不透明度', min: .6, max: .98, step: .01, unit: '%' }, { key: 'articleOpacity', label: '正文不透明度', min: .8, max: .99, step: .01, unit: '%' }, { key: 'blur', label: '磨砂程度', min: 0, max: 28, step: 1, unit: 'px' }, { key: 'fontSize', label: '正文字号', min: 16, max: 23, step: 1, unit: 'px' }, { key: 'lineHeight', label: '正文行高', min: 1.6, max: 2.2, step: .05, unit: '' }] as const
-function reset() { for (const c of controls) settings.value[c.key] = defaultSite[c.key]; settings.value.background = 'mist'; settings.value.backgroundAssetId = null; settings.value.navTopOpacity = 0; settings.value.navScrolledOpacity = .92 }
 async function save() {
   busy.value = true
-  try { const result = await api<typeof loaded>('/api/admin/site', { method: 'PUT', body: { settings: settings.value, lockVersion: version.value } }); version.value = result.lockVersion; snapshot.value = JSON.stringify(settings.value); await refreshNuxtData('site-settings'); message.success('外观已应用到前台') } catch (e) { message.error(errorText(e)) } finally { busy.value = false }
+  try {
+    const result = await api<typeof loaded>('/api/admin/site', { method: 'PUT', body: { settings: settings.value, lockVersion: version.value } })
+    version.value = result.lockVersion; snapshot.value = JSON.stringify(settings.value)
+    await refreshNuxtData('site-settings'); message.success('背景已应用到前台')
+  } catch (e) { message.error(errorText(e)) } finally { busy.value = false }
 }
 </script>
-<template><div><AdminPageHead title="外观设置" subtitle="人文阅读与磨砂质感，在同一套设计里安静共存。"><button @click="reset">恢复默认样式</button><button class="primary" :disabled="busy || !dirty" @click="save">应用更改</button></AdminPageHead><div class="appearance-grid"><section class="studio-panel appearance-controls"><h2>首屏与背景</h2><div class="field"><label for="headline">首屏文案</label><input id="headline" v-model="settings.headline" maxlength="120"></div><div class="field"><label for="subtitle">一句话介绍</label><textarea id="subtitle" v-model="settings.subtitle" maxlength="300" rows="3" /></div><label class="field-label">背景色调</label><div class="scene-options"><button v-for="scene in [{ id: 'mist', name: '雾山' }, { id: 'blue', name: '青岚' }, { id: 'dusk', name: '暮色' }]" :key="scene.id" :class="{ active: settings.background === scene.id && !settings.backgroundAssetId }" @click="settings.background = scene.id as SiteSettings['background']; settings.backgroundAssetId = null"><img :src="`/backgrounds/${scene.id}.svg`" :alt="scene.name"><span>{{ scene.name }}</span></button></div><SiteImageControl v-model="settings.backgroundAssetId" kind="wallpaper" /><div class="settings-divider" /><h2>个人头像</h2><SiteImageControl v-model="settings.avatarAssetId" kind="avatar" /><div class="settings-divider" /><h2>导航透明度</h2><div class="range-field"><label for="nav-top-opacity">页面顶部不透明度<output>{{ Math.round(settings.navTopOpacity * 100) }}%</output></label><input id="nav-top-opacity" v-model.number="settings.navTopOpacity" type="range" min="0" max="1" step="0.01"></div><div class="range-field"><label for="nav-scrolled-opacity">滚动后不透明度<output>{{ Math.round(settings.navScrolledOpacity * 100) }}%</output></label><input id="nav-scrolled-opacity" v-model.number="settings.navScrolledOpacity" type="range" min="0.5" max="1" step="0.01"></div><p class="admin-footnote">顶部设为 0% 可透出壁纸，向下滚动后自动加深底色。</p><div class="settings-divider" /><h2>玻璃与阅读</h2><div v-for="c in controls" :key="c.key" class="range-field"><label :for="c.key">{{ c.label }}<output>{{ c.unit === '%' ? Math.round(settings[c.key] * 100) : settings[c.key] }}{{ c.unit }}</output></label><input :id="c.key" v-model.number="settings[c.key]" type="range" :min="c.min" :max="c.max" :step="c.step"></div><div class="help-note">调整会即时更新右侧预览。点击“应用更改”后，访客才会看到新的外观。</div></section><section class="preview-shell"><div class="preview-toolbar"><div class="segmented"><button :class="{ active: mode === 'home' }" @click="mode = 'home'">首页</button><button :class="{ active: mode === 'article' }" @click="mode = 'article'">文章页</button></div><div class="segmented"><button :class="{ active: !mobile }" @click="mobile = false">桌面</button><button :class="{ active: mobile }" @click="mobile = true">手机</button></div></div><AppearancePreview :settings="settings" :mode="mode" :mobile="mobile" /></section></div></div></template>
+<template>
+  <div>
+    <AdminPageHead title="外观" subtitle="样式已经固定成现在的样子，平时不用调。这里只留一件事：换背景。">
+      <button class="primary" :disabled="busy || !dirty" @click="save">应用背景</button>
+    </AdminPageHead>
+    <section class="studio-panel" style="max-width:640px">
+      <h2>背景色调</h2>
+      <div class="scene-options">
+        <button v-for="scene in [{ id: 'mist', name: '雾山' }, { id: 'blue', name: '青岚' }, { id: 'dusk', name: '暮色' }]" :key="scene.id" :class="{ active: settings.background === scene.id && !settings.backgroundAssetId }" @click="settings.background = scene.id as SiteSettings['background']; settings.backgroundAssetId = null">
+          <img :src="`/backgrounds/${scene.id}.svg`" :alt="scene.name"><span>{{ scene.name }}</span>
+        </button>
+      </div>
+      <div class="settings-divider" />
+      <h2>自定义背景图</h2>
+      <SiteImageControl v-model="settings.backgroundAssetId" kind="wallpaper" />
+      <p class="admin-footnote">上传或选择一张图片作为全站背景；选了自定义图后，色调预设暂时不生效，移除图片即可恢复。</p>
+    </section>
+  </div>
+</template>

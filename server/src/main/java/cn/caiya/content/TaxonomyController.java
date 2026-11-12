@@ -18,13 +18,15 @@ public class TaxonomyController {
     this.audit = audit;
   }
 
+  // Slug is optional on create: when omitted, the next numeric slug is
+  // assigned automatically (see assignSlug). It never changes afterwards.
   public record Input(
       @NotBlank @Size(max = 60) String name,
-      @NotNull @Size(max = 80) @Pattern(regexp = "[a-z0-9]+(-[a-z0-9]+)*") String slug) {}
+      @Size(max = 80) @Pattern(regexp = "[a-z0-9]+(-[a-z0-9]+)*") String slug) {}
 
   public record CategoryInput(
       @NotBlank @Size(max = 60) String name,
-      @NotNull @Size(max = 80) @Pattern(regexp = "[a-z0-9]+(-[a-z0-9]+)*") String slug,
+      @Size(max = 80) @Pattern(regexp = "[a-z0-9]+(-[a-z0-9]+)*") String slug,
       @Min(0) @Max(10000) int sortOrder) {}
 
   // Typed views with camelCase fields; the mapper rows previously leaked
@@ -61,12 +63,71 @@ public class TaxonomyController {
     return new TaxonomyView(tags, categories);
   }
 
+  @GetMapping("/api/admin/taxonomy/tags/paged")
+  public PublicViews.Page<TagView> tagsPaged(
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String q) {
+    checkPage(page, size, q);
+    String pattern = likePattern(q);
+    var items =
+        mapper.tagsPaged(q, pattern, size, (page - 1) * size).stream()
+            .map(
+                row ->
+                    new TagView(
+                        Views.number(row, "id"),
+                        (String) row.get("name"),
+                        (String) row.get("slug"),
+                        Views.number(row, "count")))
+            .toList();
+    return new PublicViews.Page<>(items, mapper.tagsCount(q, pattern), page, size);
+  }
+
+  @GetMapping("/api/admin/taxonomy/categories/paged")
+  public PublicViews.Page<CategoryView> categoriesPaged(
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String q) {
+    checkPage(page, size, q);
+    String pattern = likePattern(q);
+    var items =
+        mapper.categoriesPaged(q, pattern, size, (page - 1) * size).stream()
+            .map(
+                row ->
+                    new CategoryView(
+                        Views.number(row, "id"),
+                        (String) row.get("name"),
+                        (String) row.get("slug"),
+                        (int) Views.number(row, "sort_order"),
+                        Views.number(row, "count")))
+            .toList();
+    return new PublicViews.Page<>(items, mapper.categoriesCount(q, pattern), page, size);
+  }
+
+  private static void checkPage(int page, int size, String q) {
+    if (page < 1 || size < 1 || size > 100 || q.length() > 100)
+      throw new ApiException(400, "分页或搜索参数无效");
+  }
+
+  private static String likePattern(String q) {
+    return "%" + q.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+  }
+
   @PostMapping("/api/admin/taxonomy/tags")
   @Transactional
   public Map<String, Object> create(@Valid @RequestBody Input input) {
     var v = values(input);
+    boolean autoSlug = v.get("slug") == null;
+    if (autoSlug) v.put("slug", "auto-" + java.util.UUID.randomUUID());
     mapper.createTag(v);
-    audit.record("taxonomy.create", "tags", Views.number(v, "id"));
+    long id = Views.number(v, "id");
+    if (autoSlug) {
+      long candidate = id;
+      while (mapper.tagSlugCount(Long.toString(candidate), id) > 0) candidate++;
+      v.put("slug", Long.toString(candidate));
+      mapper.updateTagSlug(v);
+    }
+    audit.record("taxonomy.create", "tags", id);
     return v;
   }
 
@@ -96,8 +157,17 @@ public class TaxonomyController {
   @Transactional
   public Map<String, Object> createCategory(@Valid @RequestBody CategoryInput input) {
     var v = categoryValues(input);
+    boolean autoSlug = v.get("slug") == null;
+    if (autoSlug) v.put("slug", "auto-" + java.util.UUID.randomUUID());
     mapper.createCategory(v);
-    audit.record("taxonomy.category.create", "category", Views.number(v, "id"));
+    long id = Views.number(v, "id");
+    if (autoSlug) {
+      long candidate = id;
+      while (mapper.categorySlugCount(Long.toString(candidate), id) > 0) candidate++;
+      v.put("slug", Long.toString(candidate));
+      mapper.updateCategorySlug(v);
+    }
+    audit.record("taxonomy.category.create", "category", id);
     return v;
   }
 
@@ -124,14 +194,14 @@ public class TaxonomyController {
   private Map<String, Object> values(Input input) {
     var value = new HashMap<String, Object>();
     value.put("name", input.name().trim());
-    value.put("slug", input.slug());
+    value.put("slug", input.slug() == null || input.slug().isBlank() ? null : input.slug());
     return value;
   }
 
   private Map<String, Object> categoryValues(CategoryInput input) {
     var value = new HashMap<String, Object>();
     value.put("name", input.name().trim());
-    value.put("slug", input.slug());
+    value.put("slug", input.slug() == null || input.slug().isBlank() ? null : input.slug());
     value.put("sortOrder", input.sortOrder());
     return value;
   }
