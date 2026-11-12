@@ -48,6 +48,8 @@ public final class PublicViews {
       String bodyMarkdown,
       Long coverAssetId,
       Long categoryId,
+      String categoryName,
+      List<String> tagNames,
       Map<String, Object> details,
       List<Map<String, Object>> tags,
       List<Long> tagIds,

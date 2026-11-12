@@ -14,6 +14,9 @@ public interface ContentMapper {
   @Select("SELECT * FROM content_revision WHERE id=#{id}")
   Map<String, Object> revision(long id);
 
+  @Select("SELECT name FROM category WHERE id=#{id}")
+  String categoryName(Long id);
+
   @Insert("INSERT INTO content(content_type,slug) VALUES(#{type},#{slug})")
   @Options(useGeneratedKeys = true, keyProperty = "id")
   void insert(Map<String, Object> values);

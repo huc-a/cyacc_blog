@@ -116,6 +116,9 @@ public class ContentService {
     var navigation =
         new PublicViews.Navigation(
             neighbor(mapper.neighbor(id, false)), neighbor(mapper.neighbor(id, true)));
+    var tagNames =
+        ((List<Map<String, Object>>) out.get("tags"))
+            .stream().map(tag -> (String) tag.get("name")).toList();
     return new PublicViews.ContentDetail(
         number(out, "id"),
         (String) out.get("contentType"),
@@ -131,6 +134,8 @@ public class ContentService {
         (String) out.get("bodyMarkdown"),
         out.get("coverAssetId") == null ? null : number(out, "coverAssetId"),
         out.get("categoryId") == null ? null : number(out, "categoryId"),
+        (String) out.get("categoryName"),
+        tagNames,
         (Map<String, Object>) out.get("details"),
         (List<Map<String, Object>>) out.get("tags"),
         (List<Long>) out.get("tagIds"),
@@ -165,6 +170,11 @@ public class ContentService {
     out.put("summary", r.get("summary"));
     out.put("coverAssetId", r.get("cover_asset_id"));
     out.put("categoryId", r.get("category_id"));
+    out.put(
+        "categoryName",
+        r.get("category_id") == null
+            ? null
+            : mapper.categoryName(((Number) r.get("category_id")).longValue()));
     out.putAll(details.read(rid));
     if (publicOnly) removePrivateFields(out);
     return out;

@@ -16,8 +16,6 @@ import java.time.*;
 import java.util.*;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -81,7 +79,16 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
 
   ContentInput input(String type, String slug, String title, long version, Object ignored) {
     return new ContentInput(
-        type, slug, title, "摘要 " + title, "# 正文 " + title, version, null, List.of(), null, null,
+        type,
+        slug,
+        title,
+        "摘要 " + title,
+        "# 正文 " + title,
+        version,
+        null,
+        List.of(),
+        null,
+        null,
         List.of());
   }
 
@@ -146,6 +153,11 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
                 .param("categoryId", Long.toString(categoryId)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items[0].categoryName").value("Category " + slug));
+    mvc.perform(get("/api/public/contents/" + slug))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.categoryName").value("Category " + slug))
+        .andExpect(jsonPath("$.categoryId").value(categoryId));
+    assertThat(contents.publicDetail(slug).categoryName()).isEqualTo("Category " + slug);
     assertThat(taxonomy.categoryReferences(categoryId)).isPositive();
     mvc.perform(delete("/api/admin/taxonomy/categories/" + categoryId).with(csrf()))
         .andExpect(status().isConflict());
@@ -603,8 +615,7 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
 
   @Test
   void nonArticleTypesAreRejected() {
-    assertThatThrownBy(
-            () -> contents.create(input("website", slug(), "网站", 0, null)))
+    assertThatThrownBy(() -> contents.create(input("website", slug(), "网站", 0, null)))
         .isInstanceOf(ApiException.class);
     assertThatThrownBy(() -> contents.create(input("work", slug(), "作品", 0, null)))
         .isInstanceOf(ApiException.class);
@@ -613,5 +624,4 @@ class ContentAndMediaIntegrationTest extends DatabaseTestSupport {
     assertThatThrownBy(() -> contents.create(input("deal", slug(), "活动", 0, null)))
         .isInstanceOf(ApiException.class);
   }
-
 }
